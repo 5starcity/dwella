@@ -23,3 +23,21 @@
     display: block;
     width: 100%;
   }
+  /* Smooth button press feel */
+button,
+a.hero__btn,
+a.listing-card__link,
+a.details-page__button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+.hero__btn:active,
+.listing-card__link:active,
+.details-page__button:active {
+  transform: scale(0.97) !important;
+  opacity: 0.9;
+}

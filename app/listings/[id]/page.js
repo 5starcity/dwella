@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   HiOutlineCheckBadge,
   HiOutlineMapPin,
@@ -84,11 +85,16 @@ export default function ListingDetailsPage() {
   if (loading) {
     return (
       <main className="details-page">
-        <div className="details-page__not-found">
+        <motion.div
+          className="details-page__not-found"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
           <p className="details-page__tag">Loading</p>
           <h1>Loading property...</h1>
           <p>Please wait a moment.</p>
-        </div>
+        </motion.div>
       </main>
     );
   }
@@ -96,16 +102,20 @@ export default function ListingDetailsPage() {
   if (!listing) {
     return (
       <main className="details-page">
-        <div className="details-page__not-found">
+        <motion.div
+          className="details-page__not-found"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <p className="details-page__tag">Listing Not Found</p>
           <h1>Property not found</h1>
           <p>This property may have been removed or the link is invalid.</p>
-        </div>
+        </motion.div>
       </main>
     );
   }
 
-  // Build images array — support both old single image and new multiple images
   const images = listing.images && listing.images.length > 0
     ? listing.images
     : listing.image
@@ -210,9 +220,12 @@ export default function ListingDetailsPage() {
       <section className="details-page__grid">
 
         {/* Left — Media */}
-        <div className="details-page__media-col">
-
-          {/* Main image or video */}
+        <motion.div
+          className="details-page__media-col"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+        >
           <div className="details-page__media">
             {showVideo && listing.videoUrl ? (
               <video
@@ -230,7 +243,6 @@ export default function ListingDetailsPage() {
             )}
           </div>
 
-          {/* Thumbnail strip */}
           {(images.length > 1 || listing.videoUrl) && (
             <div className="details-page__thumbnails">
               {images.map((src, i) => (
@@ -253,11 +265,15 @@ export default function ListingDetailsPage() {
               )}
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Right — Content */}
-        <div className="details-page__content">
-
+        <motion.div
+          className="details-page__content"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut", delay: 0.1 }}
+        >
           {isOwner && !isEditing && (
             <div className="details-page__owner-actions">
               <button className="details-page__edit-btn" onClick={() => setIsEditing(true)}>
@@ -270,7 +286,12 @@ export default function ListingDetailsPage() {
           )}
 
           {isEditing ? (
-            <div className="details-page__edit-form">
+            <motion.div
+              className="details-page__edit-form"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
               <p className="details-page__tag">Editing Listing</p>
               <h2>Update Property Details</h2>
               <div className="edit-form__grid">
@@ -291,7 +312,7 @@ export default function ListingDetailsPage() {
                   <input name="location" value={editForm.location || ""} onChange={handleEditChange} />
                 </div>
                 <div className="edit-form__field">
-                  <label>Distance from RSU</label>
+                  <label>Distance from campus</label>
                   <input name="distanceFromRSU" value={editForm.distanceFromRSU || ""} onChange={handleEditChange} />
                 </div>
                 <div className="edit-form__field">
@@ -339,10 +360,14 @@ export default function ListingDetailsPage() {
                   Cancel
                 </button>
               </div>
-            </div>
+            </motion.div>
 
           ) : (
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            >
               <div className="details-page__header">
                 <div>
                   <p className="details-page__tag">Property Details</p>
@@ -352,7 +377,7 @@ export default function ListingDetailsPage() {
                     <span>{listing.location}</span>
                     {listing.distanceFromRSU && (
                       <span className="details-page__distance">
-                        · {listing.distanceFromRSU} from RSU
+                        · {listing.distanceFromRSU} from campus
                       </span>
                     )}
                   </p>
@@ -387,7 +412,10 @@ export default function ListingDetailsPage() {
                       </span>
                     )}
                     {listing.availability && (
-                      <span className={"details-page__availability " + (listing.availability === "Available Now" ? "available" : listing.availability === "Available Soon" ? "soon" : "unavailable")}>
+                      <span className={"details-page__availability " + (
+                        listing.availability === "Available Now" ? "available" :
+                        listing.availability === "Available Soon" ? "soon" : "unavailable"
+                      )}>
                         {listing.availability}
                       </span>
                     )}
@@ -424,7 +452,7 @@ export default function ListingDetailsPage() {
                 {listing.distanceFromRSU && (
                   <div className="details-page__fact">
                     <HiOutlineMapPin />
-                    <div><span>From RSU Gate</span><strong>{listing.distanceFromRSU}</strong></div>
+                    <div><span>From Campus</span><strong>{listing.distanceFromRSU}</strong></div>
                   </div>
                 )}
               </div>
@@ -499,10 +527,9 @@ export default function ListingDetailsPage() {
                   <p className="details-page__report-sent">✅ Report submitted. We'll review this listing.</p>
                 )}
               </div>
-
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </section>
     </main>
   );

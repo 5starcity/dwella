@@ -14,42 +14,40 @@ export default function Hero() {
       <div className="hero__content">
         <motion.p
           className="hero__tag"
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
+          transition={{ duration: 0.4 }}
         >
-         Verified housing in port-harcourt - no hidden fees, no stress
+          Verified housing in Port Harcourt — no hidden fees, no stress
         </motion.p>
 
         <motion.h1
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.1 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
         >
           Find a place to live without the wahala
         </motion.h1>
 
         <motion.p
           className="hero__text"
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.2 }}
+          transition={{ duration: 0.4, delay: 0.18 }}
         >
-          Browse verified listings in port-harcourt with clear prices, real photos,
-          and direct contact to landlords. No stress. No hidden fees.
+          Browse verified listings in Port Harcourt with clear prices, real
+          photos, and direct contact to landlords. No stress. No hidden fees.
         </motion.p>
 
         <motion.div
           className="hero__actions"
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.3 }}
+          transition={{ duration: 0.4, delay: 0.26 }}
         >
           <Link href="/listings" className="hero__btn hero__btn--primary">
             Explore Listings
           </Link>
-
-          {/* Show Post Property only to landlords or logged out users */}
           {!user && (
             <Link href="/signup" className="hero__btn hero__btn--secondary">
               List Your Property
@@ -62,12 +60,11 @@ export default function Hero() {
           )}
         </motion.div>
 
-        {/* Stats row */}
         <motion.div
           className="hero__stats"
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.45 }}
+          transition={{ duration: 0.4, delay: 0.36 }}
         >
           <div className="hero__stat">
             <strong>No Agents</strong>
@@ -78,8 +75,8 @@ export default function Hero() {
             <span>Trusted properties only</span>
           </div>
           <div className="hero__stat">
-            <strong>Port-harcourt Focused</strong>
-            <span>Built for easy hosuing</span>
+            <strong>Port Harcourt</strong>
+            <span>Built for easy housing</span>
           </div>
         </motion.div>
       </div>

@@ -774,6 +774,7 @@
     height: 48px;
   }
 }
+
 @media (max-width: 480px) {
   .details-page__facts {
     grid-template-columns: 1fr 1fr;

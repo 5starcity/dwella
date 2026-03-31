@@ -1,12 +1,12 @@
-// app/layout.js
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import PageTransition from "@/components/layout/PageTransition";
 import "./global.css";
 
 export const metadata = {
   title: "Dwella",
-  description: "Find verified housing across Nigeria ",
+  description: "Find verified student housing across Nigeria — no agents, no stress",
 };
 
 export default function RootLayout({ children }) {
@@ -15,7 +15,9 @@ export default function RootLayout({ children }) {
       <body>
         <AuthProvider>
           <Navbar />
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
           <Footer />
         </AuthProvider>
       </body>

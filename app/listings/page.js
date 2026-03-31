@@ -1,10 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import ListingCard from "@/components/listings/ListingCard";
 import FilterBar from "@/components/listings/FilterBar";
 import { fetchListings } from "@/lib/firestoreListings";
 import "@/styles/listings-page.css";
+
+const containerVariants = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+};
 
 export default function ListingsPage() {
   const [search, setSearch] = useState("");
@@ -41,19 +56,14 @@ export default function ListingsPage() {
       const matchesSearch =
         title.includes(search.toLowerCase()) ||
         listingLocation.includes(search.toLowerCase());
-
       const matchesLocation =
         location === "All" || listing.location === location;
-
       const matchesType =
         type === "All" || listingType === type;
-
       const matchesPrice =
         price === "All" || listingPrice <= Number(price);
-
       const matchesVerified =
         !verified || listing.verified === true;
-
       const matchesAvailability =
         availability === "All" || listing.availability === availability;
 
@@ -79,26 +89,37 @@ export default function ListingsPage() {
 
   return (
     <main className="listings-page">
-      <div className="listings-page__header">
+      <motion.div
+        className="listings-page__header"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
         <p className="listings-page__tag">Browse Properties</p>
         <h1>Housing in Port Harcourt</h1>
         <p>Search and filter listings by area, type, budget and more.</p>
-      </div>
+      </motion.div>
 
-      <FilterBar
-        search={search}
-        setSearch={setSearch}
-        location={location}
-        setLocation={setLocation}
-        type={type}
-        setType={setType}
-        price={price}
-        setPrice={setPrice}
-        verified={verified}
-        setVerified={setVerified}
-        availability={availability}
-        setAvailability={setAvailability}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        <FilterBar
+          search={search}
+          setSearch={setSearch}
+          location={location}
+          setLocation={setLocation}
+          type={type}
+          setType={setType}
+          price={price}
+          setPrice={setPrice}
+          verified={verified}
+          setVerified={setVerified}
+          availability={availability}
+          setAvailability={setAvailability}
+        />
+      </motion.div>
 
       <div className="listings-page__results">
         {loading ? (
@@ -115,22 +136,33 @@ export default function ListingsPage() {
         )}
       </div>
 
-      <div className="listings-page__grid">
-        {loading ? (
+      {loading ? (
+        <div className="listings-page__grid">
           <div className="listings-page__loading">
             <p>Loading properties...</p>
           </div>
-        ) : filteredListings.length > 0 ? (
-          filteredListings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))
-        ) : (
+        </div>
+      ) : filteredListings.length > 0 ? (
+        <motion.div
+          className="listings-page__grid"
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+        >
+          {filteredListings.map((listing) => (
+            <motion.div key={listing.id} variants={itemVariants}>
+              <ListingCard listing={listing} />
+            </motion.div>
+          ))}
+        </motion.div>
+      ) : (
+        <div className="listings-page__grid">
           <div className="listings-page__empty">
             <h3>No listings found</h3>
             <p>Try adjusting your filters or search terms.</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </main>
   );
 }
