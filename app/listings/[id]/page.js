@@ -23,7 +23,14 @@ import {
   HiOutlineCalendarDays,
   HiOutlinePlayCircle,
 } from "react-icons/hi2";
-import { fetchListingById, updateListing, deleteListing, incrementViewCount, reportListing } from "@/lib/firestoreListings";
+import {
+  fetchListingById,
+  updateListing,
+  deleteListing,
+  incrementViewCount,
+  reportListing,
+  expressInterest,
+} from "@/lib/firestoreListings";
 import { getFavorites, toggleFavorite } from "@/lib/favorites";
 import { useAuth } from "@/context/AuthContext";
 import { isLandlordVerified } from "@/lib/verification";
@@ -48,6 +55,8 @@ export default function ListingDetailsPage() {
   const [copied, setCopied] = useState(false);
   const [activeMedia, setActiveMedia] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
+  const [interestSent, setInterestSent] = useState(false);
+  const [sendingInterest, setSendingInterest] = useState(false);
 
   useEffect(() => {
     setFavorites(getFavorites());
@@ -71,7 +80,7 @@ export default function ListingDetailsPage() {
           setListing(data);
           setEditForm(data);
         }
-        try { await incrementViewCount(listingId); } catch (e) {}
+        try { await incrementViewCount(listingId); } catch (e) { }
       } catch (error) {
         console.error("Error fetching listing:", error);
         setListing(null);
@@ -119,11 +128,19 @@ export default function ListingDetailsPage() {
   const images = listing.images && listing.images.length > 0
     ? listing.images
     : listing.image
-    ? [listing.image]
-    : [];
+      ? [listing.image]
+      : [];
 
   const isOwner = user && user.uid === listing.landlordId;
   const saved = favorites.includes(listing.id);
+
+  const whatsappNumber =
+    typeof listing.contact === "string" && listing.contact.startsWith("0")
+      ? "234" + listing.contact.slice(1)
+      : listing.contact;
+
+  const whatsappHref = "https://wa.me/" + whatsappNumber;
+  const telHref = "tel:" + listing.contact;
 
   function handleToggleFavorite() {
     const updated = toggleFavorite(listing.id);
@@ -199,6 +216,27 @@ export default function ListingDetailsPage() {
     }
   }
 
+  async function handleExpressInterest() {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setSendingInterest(true);
+    try {
+      await expressInterest(listingId, user.uid, user.displayName || "A student");
+      const studentName = user.displayName || "A student";
+      const message = "Hi, I found your listing \"" + listing.title + "\" on Dwella and I'm interested. My name is " + studentName + ".";
+      const encodedMessage = encodeURIComponent(message);
+      const waUrl = "https://wa.me/" + whatsappNumber + "?text=" + encodedMessage;
+      setInterestSent(true);
+      window.open(waUrl, "_blank");
+    } catch (error) {
+      console.error("Error expressing interest:", error);
+    } finally {
+      setSendingInterest(false);
+    }
+  }
+
   function formatDate(ts) {
     if (!ts) return null;
     const date = ts.toDate ? ts.toDate() : new Date(ts);
@@ -206,14 +244,6 @@ export default function ListingDetailsPage() {
       day: "numeric", month: "short", year: "numeric",
     });
   }
-
-  const whatsappNumber =
-    typeof listing.contact === "string" && listing.contact.startsWith("0")
-      ? "234" + listing.contact.slice(1)
-      : listing.contact;
-
-  const whatsappHref = "https://wa.me/" + whatsappNumber;
-  const telHref = "tel:" + listing.contact;
 
   return (
     <main className="details-page">
@@ -485,12 +515,49 @@ export default function ListingDetailsPage() {
               <div className="details-page__section">
                 <h2>Quick Actions</h2>
                 <div className="details-page__actions">
-                  <a href={whatsappHref} target="_blank" rel="noreferrer" className="details-page__button details-page__button--primary">
+                  
+                   <a href={whatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="details-page__button details-page__button--primary"
+                  >
                     <HiOutlineChatBubbleLeftRight /> Chat on WhatsApp
                   </a>
-                  <a href={telHref} className="details-page__button details-page__button--secondary">
+                  
+                    <a href={telHref}
+                    className="details-page__button details-page__button--secondary"
+                  >
                     <HiOutlinePhone /> Call Now
                   </a>
+                </div>
+
+                <div className="details-page__interest">
+                  {!interestSent ? (
+                    <button
+                      className="details-page__interest-btn"
+                      onClick={handleExpressInterest}
+                      disabled={sendingInterest || isOwner}
+                    >
+                      {sendingInterest ? "Sending..." : "⚡ Express Interest"}
+                    </button>
+                  ) : (
+                    <div className="details-page__interest-sent">
+                      <p>✅ Interest sent! The landlord has been notified on WhatsApp.</p>
+                    </div>
+                  )}
+                  {!user && (
+                    <p className="details-page__interest-note">
+                      <a href="/login">Log in</a> to express interest in this property.
+                    </p>
+                  )}
+                  {isOwner && (
+                    <p className="details-page__interest-note">This is your listing.</p>
+                  )}
+                  {listing.interests > 0 && (
+                    <p className="details-page__interest-count">
+                      ⚡ {listing.interests} {listing.interests === 1 ? "person has" : "people have"} expressed interest
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -529,8 +596,8 @@ export default function ListingDetailsPage() {
               </div>
             </motion.div>
           )}
-        </motion.div>
-      </section>
-    </main>
+      </motion.div>
+    </section>
+    </main >
   );
 }
