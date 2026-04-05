@@ -85,6 +85,11 @@ export default function ListingDetailsPage() {
           setListing(data);
           setEditForm(data);
         }
+        // VIDEO FALLBACK: if no images but has video, auto-show video
+        const hasImagesOnLoad = (data?.images?.length > 0) || !!data?.image;
+        if (!hasImagesOnLoad && data?.videoUrl) {
+          setShowVideo(true);
+        }
         try { await incrementViewCount(listingId); } catch (e) { }
       } catch (error) {
         console.error("Error fetching listing:", error);
@@ -135,16 +140,6 @@ export default function ListingDetailsPage() {
     : listing.image
     ? [listing.image]
     : [];
-
-  const hasImages = images.length > 0;
-  const hasVideo = !!listing.videoUrl;
-
-  // VIDEO FALLBACK: auto-show video if no images uploaded
-  // useEffect(() => {
-    // if (!hasImages && hasVideo) {
-      //setShowVideo(true);
-    //}
-  //}, [hasImages, hasVideo]);
 
   const isOwner = user && user.uid === listing.landlordId;
   const saved = favorites.includes(listing.id);
@@ -762,4 +757,4 @@ export default function ListingDetailsPage() {
       </section>
     </main>
   );
-}
+}git
