@@ -1164,3 +1164,253 @@
     justify-content: center;
     margin-top: 1rem;
   }
+  /* ── append to styles/roommates.css ── */
+
+/* Toast */
+.roommates-page__toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.28);
+    color: #86efac;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    z-index: 999;
+    white-space: nowrap;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  .roommates-page__toast.error {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.28);
+    color: #fca5a5;
+  }
+  
+  /* ── My Posts section ── */
+  .roommates-page__my-posts {
+    background: var(--card-bg, rgba(17, 24, 39, 0.97));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 18px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .roommates-page__my-posts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  
+  .roommates-page__my-posts-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text, #f1f5f9);
+    margin: 0;
+  }
+  
+  .roommates-page__my-posts-header h2 svg {
+    color: var(--accent);
+  }
+  
+  .roommates-page__my-posts-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  
+  .roommates-page__my-posts-new {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    transition: background 0.18s;
+  }
+  .roommates-page__my-posts-new:hover {
+    background: rgba(79,110,247,0.1);
+  }
+  
+  /* Skeleton */
+  .roommates-page__my-posts-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .roommates-page__my-posts-skel {
+    height: 56px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    animation: shimmer 1.4s infinite;
+  }
+  
+  /* Empty */
+  .roommates-page__my-posts-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+  }
+  .roommates-page__my-posts-empty p {
+    font-size: 0.85rem;
+    color: var(--text-muted, #64748b);
+    margin: 0;
+  }
+  
+  /* Post rows */
+  .roommates-page__my-posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  
+  .roommates-page__my-post-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    transition: background 0.15s;
+    flex-wrap: wrap;
+  }
+  .roommates-page__my-post-row:hover {
+    background: rgba(255,255,255,0.04);
+  }
+  .roommates-page__my-post-row.filled {
+    opacity: 0.55;
+  }
+  
+  .roommates-page__my-post-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .roommates-page__my-post-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text, #e2e8f0);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .roommates-page__my-post-status {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  .roommates-page__my-post-status.open {
+    background: rgba(34,197,94,0.12);
+    color: #86efac;
+    border: 1px solid rgba(34,197,94,0.22);
+  }
+  .roommates-page__my-post-status.filled {
+    background: rgba(148,163,184,0.1);
+    color: #94a3b8;
+    border: 1px solid rgba(148,163,184,0.18);
+  }
+  
+  .roommates-page__my-post-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .roommates-page__my-post-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.76rem;
+    color: var(--text-muted, #64748b);
+  }
+  .roommates-page__my-post-meta svg {
+    font-size: 0.75rem;
+  }
+  
+  .roommates-page__my-post-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  
+  .roommates-page__my-post-fill,
+  .roommates-page__my-post-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.18s;
+    font-family: inherit;
+  }
+  
+  .roommates-page__my-post-fill {
+    background: rgba(52,211,153,0.08);
+    border-color: rgba(52,211,153,0.2);
+    color: #6ee7b7;
+  }
+  .roommates-page__my-post-fill:hover:not(:disabled) {
+    background: rgba(52,211,153,0.14);
+    border-color: rgba(52,211,153,0.32);
+  }
+  
+  .roommates-page__my-post-delete {
+    background: rgba(239,68,68,0.08);
+    border-color: rgba(239,68,68,0.18);
+    color: #f87171;
+  }
+  .roommates-page__my-post-delete:hover:not(:disabled) {
+    background: rgba(239,68,68,0.14);
+    border-color: rgba(239,68,68,0.3);
+  }
+  
+  .roommates-page__my-post-fill:disabled,
+  .roommates-page__my-post-delete:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  @media (max-width: 600px) {
+    .roommates-page__my-posts { padding: 1rem; }
+    .roommates-page__my-post-row { flex-direction: column; align-items: flex-start; }
+    .roommates-page__my-post-actions { width: 100%; justify-content: flex-end; }
+  }
