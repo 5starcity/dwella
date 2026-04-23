@@ -29,41 +29,32 @@ import {
   deleteRoommatePost,
   markRoommatePostFilled,
 } from "@/lib/firestoreRoommates";
+import { createNotification } from "@/lib/firestoreNotifications";
 import { LOCATION_FILTER_OPTIONS } from "@/lib/locations";
 import "@/styles/roommates.css";
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 18 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] } },
-};
+const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
+const fadeUp  = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] } } };
 
 export default function RoommatesPage() {
   const { user, userRole } = useAuth();
 
-  const [posts, setPosts]           = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [posts, setPosts]                   = useState([]);
+  const [loading, setLoading]               = useState(true);
   const [interestSentIds, setInterestSentIds] = useState(new Set());
 
-  // My posts
   const [myPosts, setMyPosts]               = useState([]);
   const [myPostsLoading, setMyPostsLoading] = useState(false);
   const [deletingId, setDeletingId]         = useState(null);
   const [fillingId, setFillingId]           = useState(null);
   const [toast, setToast]                   = useState(null);
 
-  // Filters
   const [search, setSearch]         = useState("");
   const [location, setLocation]     = useState("All");
   const [maxSplit, setMaxSplit]      = useState("All");
   const [gender, setGender]         = useState("All");
   const [occupation, setOccupation] = useState("All");
 
-  // Load public board
   useEffect(() => {
     async function load() {
       try {
@@ -78,7 +69,6 @@ export default function RoommatesPage() {
     load();
   }, []);
 
-  // Load student's own posts
   useEffect(() => {
     if (!user || userRole !== "student") return;
     async function loadMine() {
@@ -109,7 +99,6 @@ export default function RoommatesPage() {
       setPosts((prev) => prev.filter((p) => p.id !== postId));
       showToast("Post deleted.");
     } catch (e) {
-      console.error("Delete error:", e);
       showToast("Failed to delete post.", "error");
     } finally {
       setDeletingId(null);
@@ -120,13 +109,10 @@ export default function RoommatesPage() {
     setFillingId(postId);
     try {
       await markRoommatePostFilled(postId);
-      setMyPosts((prev) =>
-        prev.map((p) => p.id === postId ? { ...p, status: "filled" } : p)
-      );
+      setMyPosts((prev) => prev.map((p) => p.id === postId ? { ...p, status: "filled" } : p));
       setPosts((prev) => prev.filter((p) => p.id !== postId));
       showToast("Marked as filled — removed from the board.");
     } catch (e) {
-      console.error("Mark filled error:", e);
       showToast("Failed to update post.", "error");
     } finally {
       setFillingId(null);
@@ -135,23 +121,16 @@ export default function RoommatesPage() {
 
   const filtered = useMemo(() => {
     return posts.filter((p) => {
-      const matchSearch =
-        search === "" ||
-        p.listingTitle?.toLowerCase().includes(search.toLowerCase()) ||
-        p.listingLocation?.toLowerCase().includes(search.toLowerCase()) ||
-        p.posterName?.toLowerCase().includes(search.toLowerCase()) ||
-        p.message?.toLowerCase().includes(search.toLowerCase());
-      const matchLocation  = location === "All" || p.listingLocation === location;
-      const matchSplit     = maxSplit === "All" || (p.splitCost || 0) <= Number(maxSplit);
-      const matchGender    = gender === "All" || p.preferences?.gender === gender || p.preferences?.gender === "No preference";
+      const matchSearch     = search === "" || p.listingTitle?.toLowerCase().includes(search.toLowerCase()) || p.listingLocation?.toLowerCase().includes(search.toLowerCase()) || p.posterName?.toLowerCase().includes(search.toLowerCase()) || p.message?.toLowerCase().includes(search.toLowerCase());
+      const matchLocation   = location === "All" || p.listingLocation === location;
+      const matchSplit      = maxSplit === "All" || (p.splitCost || 0) <= Number(maxSplit);
+      const matchGender     = gender === "All" || p.preferences?.gender === gender || p.preferences?.gender === "No preference";
       const matchOccupation = occupation === "All" || p.preferences?.occupation === occupation || p.preferences?.occupation === "Any";
       return matchSearch && matchLocation && matchSplit && matchGender && matchOccupation;
     });
   }, [posts, search, location, maxSplit, gender, occupation]);
 
-  const activeFilterCount = [
-    search !== "", location !== "All", maxSplit !== "All", gender !== "All", occupation !== "All",
-  ].filter(Boolean).length;
+  const activeFilterCount = [search !== "", location !== "All", maxSplit !== "All", gender !== "All", occupation !== "All"].filter(Boolean).length;
 
   function clearFilters() {
     setSearch(""); setLocation("All"); setMaxSplit("All"); setGender("All"); setOccupation("All");
@@ -163,8 +142,24 @@ export default function RoommatesPage() {
       await expressRoommateInterest(post.id, user.uid, user.displayName || "Someone");
       setInterestSentIds((prev) => new Set([...prev, post.id]));
       setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, interests: (p.interests || 0) + 1 } : p));
+
+      // ── Fire notification to post owner ──
+      try {
+        await createNotification({
+          userId:     post.postedBy,
+          type:       "roommate_interest",
+          title:      "New interest on your post",
+          message:    `${user.displayName || "Someone"} is interested in your roommate post for "${post.listingTitle}"`,
+          postId:     post.id,
+          senderId:   user.uid,
+          senderName: user.displayName || "Someone",
+        });
+      } catch (e) {
+        console.warn("Notification failed silently:", e);
+      }
+
       const waNum = post.posterContact?.startsWith("0") ? "234" + post.posterContact.slice(1) : post.posterContact;
-      const msg = encodeURIComponent(`Hi ${post.posterName}, I saw your roommate post on Velen for "${post.listingTitle}" and I'm interested in splitting the rent. My name is ${user.displayName || "a prospective tenant"}.`);
+      const msg   = encodeURIComponent(`Hi ${post.posterName}, I saw your roommate post on Velen for "${post.listingTitle}" and I'm interested in splitting the rent. My name is ${user.displayName || "a prospective tenant"}.`);
       window.open(`https://wa.me/${waNum}?text=${msg}`, "_blank");
     } catch (e) {
       console.error("Interest error:", e);
@@ -182,65 +177,38 @@ export default function RoommatesPage() {
   return (
     <main className="roommates-page">
 
-      {/* Toast */}
       {toast && (
         <motion.div
           className={"roommates-page__toast" + (toast.type === "error" ? " error" : "")}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
         >
           {toast.type === "error" ? <HiOutlineExclamationTriangle /> : <HiOutlineCheck />}
           {toast.msg}
         </motion.div>
       )}
 
-      {/* ── Header ── */}
-      <motion.div
-        className="roommates-page__header"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-      >
+      <motion.div className="roommates-page__header" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
         <div>
-          <p className="roommates-page__eyebrow">
-            <HiOutlineUserGroup /> Roommate Board
-          </p>
+          <p className="roommates-page__eyebrow"><HiOutlineUserGroup /> Roommate Board</p>
           <h1>Find someone to split the rent</h1>
-          <p className="roommates-page__sub">
-            Browse roommate requests from people who found a listing they love but want to share the cost.
-          </p>
+          <p className="roommates-page__sub">Browse roommate requests from people who found a listing they love but want to share the cost.</p>
         </div>
         <div className="roommates-page__header-actions">
           {user && userRole === "student" && (
-            <Link href="/roommates/post" className="roommates-page__post-btn">
-              <HiOutlinePlus /> Post Request
-            </Link>
+            <Link href="/roommates/post" className="roommates-page__post-btn"><HiOutlinePlus /> Post Request</Link>
           )}
-          <Link href="/listings" className="roommates-page__browse-btn">
-            <HiOutlineHomeModern /> Browse Listings
-          </Link>
+          <Link href="/listings" className="roommates-page__browse-btn"><HiOutlineHomeModern /> Browse Listings</Link>
         </div>
       </motion.div>
 
-      {/* ── My Posts (students only) ── */}
       {user && userRole === "student" && (
-        <motion.div
-          className="roommates-page__my-posts"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.08 }}
-        >
+        <motion.div className="roommates-page__my-posts" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }}>
           <div className="roommates-page__my-posts-header">
             <h2>
               <HiOutlineUserGroup /> My Posts
-              {myPosts.length > 0 && (
-                <span className="roommates-page__my-posts-count">{myPosts.length}</span>
-              )}
+              {myPosts.length > 0 && <span className="roommates-page__my-posts-count">{myPosts.length}</span>}
             </h2>
-            <Link href="/roommates/post" className="roommates-page__my-posts-new">
-              <HiOutlinePlus /> New
-            </Link>
+            <Link href="/roommates/post" className="roommates-page__my-posts-new"><HiOutlinePlus /> New</Link>
           </div>
 
           {myPostsLoading ? (
@@ -250,9 +218,7 @@ export default function RoommatesPage() {
           ) : myPosts.length === 0 ? (
             <div className="roommates-page__my-posts-empty">
               <p>You haven't posted a roommate request yet.</p>
-              <Link href="/roommates/post" className="roommates-page__post-btn">
-                <HiOutlinePlus /> Post your first request
-              </Link>
+              <Link href="/roommates/post" className="roommates-page__post-btn"><HiOutlinePlus /> Post your first request</Link>
             </div>
           ) : (
             <div className="roommates-page__my-posts-list">
@@ -261,10 +227,7 @@ export default function RoommatesPage() {
                   <motion.div
                     key={post.id}
                     className={"roommates-page__my-post-row" + (post.status === "filled" ? " filled" : "")}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.25 }}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
                   >
                     <div className="roommates-page__my-post-info">
                       <div className="roommates-page__my-post-title">
@@ -276,31 +239,18 @@ export default function RoommatesPage() {
                       <div className="roommates-page__my-post-meta">
                         <span><HiOutlineMapPin />{post.listingLocation}</span>
                         <span><HiOutlineBanknotes />₦{(post.splitCost || 0).toLocaleString()}/yr each</span>
-                        {post.interests > 0 && (
-                          <span><HiOutlineBolt />{post.interests} interested</span>
-                        )}
+                        {post.interests > 0 && <span><HiOutlineBolt />{post.interests} interested</span>}
                         <span>{formatDate(post.createdAt)}</span>
                       </div>
                     </div>
-
                     <div className="roommates-page__my-post-actions">
                       {post.status === "open" && (
-                        <button
-                          className="roommates-page__my-post-fill"
-                          onClick={() => handleMarkFilled(post.id)}
-                          disabled={fillingId === post.id}
-                          title="Mark as filled"
-                        >
+                        <button className="roommates-page__my-post-fill" onClick={() => handleMarkFilled(post.id)} disabled={fillingId === post.id}>
                           <HiOutlineCheckCircle />
                           <span>{fillingId === post.id ? "Saving..." : "Mark filled"}</span>
                         </button>
                       )}
-                      <button
-                        className="roommates-page__my-post-delete"
-                        onClick={() => handleDelete(post.id)}
-                        disabled={deletingId === post.id}
-                        title="Delete post"
-                      >
+                      <button className="roommates-page__my-post-delete" onClick={() => handleDelete(post.id)} disabled={deletingId === post.id}>
                         <HiOutlineTrash />
                         <span>{deletingId === post.id ? "Deleting..." : "Delete"}</span>
                       </button>
@@ -313,34 +263,16 @@ export default function RoommatesPage() {
         </motion.div>
       )}
 
-      {/* ── Filters ── */}
-      <motion.div
-        className="roommates-filters"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      >
+      <motion.div className="roommates-filters" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
         <div className="roommates-filters__search-wrap">
           <HiOutlineMagnifyingGlass className="roommates-filters__search-icon" />
-          <input
-            type="text"
-            className="roommates-filters__search"
-            placeholder="Search by location, listing, name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className="roommates-filters__clear-search" onClick={() => setSearch("")}>
-              <HiOutlineXMark />
-            </button>
-          )}
+          <input type="text" className="roommates-filters__search" placeholder="Search by location, listing, name..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          {search && <button className="roommates-filters__clear-search" onClick={() => setSearch("")}><HiOutlineXMark /></button>}
         </div>
-
         <select className="roommates-filters__select" value={location} onChange={(e) => setLocation(e.target.value)}>
           <option value="All">All Areas</option>
           {ustAreas.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
         </select>
-
         <select className="roommates-filters__select" value={maxSplit} onChange={(e) => setMaxSplit(e.target.value)}>
           <option value="All">Any Split Cost</option>
           <option value="100000">Up to ₦100k/yr</option>
@@ -349,39 +281,28 @@ export default function RoommatesPage() {
           <option value="300000">Up to ₦300k/yr</option>
           <option value="500000">Up to ₦500k/yr</option>
         </select>
-
         <select className="roommates-filters__select" value={gender} onChange={(e) => setGender(e.target.value)}>
           <option value="All">Any Gender Pref</option>
           <option value="Male">Male preferred</option>
           <option value="Female">Female preferred</option>
         </select>
-
         <select className="roommates-filters__select" value={occupation} onChange={(e) => setOccupation(e.target.value)}>
           <option value="All">Any Occupation</option>
           <option value="Student">Student</option>
           <option value="Working professional">Working professional</option>
         </select>
-
-        {activeFilterCount > 0 && (
-          <button className="roommates-filters__clear-all" onClick={clearFilters}>Clear filters</button>
-        )}
+        {activeFilterCount > 0 && <button className="roommates-filters__clear-all" onClick={clearFilters}>Clear filters</button>}
       </motion.div>
 
-      {/* ── Results count ── */}
       <div className="roommates-page__results">
         {!loading && (
           <p>
             {filtered.length} post{filtered.length !== 1 ? "s" : ""} found
-            {activeFilterCount > 0 && (
-              <span className="roommates-page__filter-count">
-                · {activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""} active
-              </span>
-            )}
+            {activeFilterCount > 0 && <span className="roommates-page__filter-count">· {activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""} active</span>}
           </p>
         )}
       </div>
 
-      {/* ── Posts grid ── */}
       {loading ? (
         <div className="roommates-page__skeleton-grid">
           {[1, 2, 3, 4].map((n) => <div key={n} className="roommates-page__skeleton" />)}
@@ -392,11 +313,7 @@ export default function RoommatesPage() {
           <h2>No roommate posts yet</h2>
           <p>{activeFilterCount > 0 ? "Try adjusting your filters." : "Be the first — find a listing and post a roommate request."}</p>
           <div className="roommates-page__empty-actions">
-            {user && userRole === "student" && (
-              <Link href="/roommates/post" className="roommates-page__post-btn">
-                <HiOutlinePlus /> Post a Request
-              </Link>
-            )}
+            {user && userRole === "student" && <Link href="/roommates/post" className="roommates-page__post-btn"><HiOutlinePlus /> Post a Request</Link>}
             <Link href="/listings" className="roommates-page__empty-btn">Browse Listings</Link>
           </div>
         </div>
@@ -406,21 +323,15 @@ export default function RoommatesPage() {
             {filtered.map((post) => {
               const isOwn       = post.postedBy === user?.uid;
               const sentAlready = interestSentIds.has(post.id);
-              const waNum = post.posterContact?.startsWith("0") ? "234" + post.posterContact.slice(1) : post.posterContact;
-              const prefTags = [
+              const waNum       = post.posterContact?.startsWith("0") ? "234" + post.posterContact.slice(1) : post.posterContact;
+              const prefTags    = [
                 post.preferences?.gender     !== "No preference" && post.preferences?.gender,
                 post.preferences?.occupation !== "Any"           && post.preferences?.occupation,
                 post.preferences?.lifestyle  !== "No preference" && post.preferences?.lifestyle,
               ].filter(Boolean);
 
               return (
-                <motion.div
-                  key={post.id}
-                  className={"roommate-card" + (isOwn ? " roommate-card--own" : "")}
-                  variants={fadeUp}
-                  layout
-                  exit={{ opacity: 0, scale: 0.97 }}
-                >
+                <motion.div key={post.id} className={"roommate-card" + (isOwn ? " roommate-card--own" : "")} variants={fadeUp} layout exit={{ opacity: 0, scale: 0.97 }}>
                   <div className="roommate-card__header">
                     <div className="roommate-card__avatar">{(post.posterName || "?")[0].toUpperCase()}</div>
                     <div className="roommate-card__poster">
@@ -455,18 +366,12 @@ export default function RoommatesPage() {
                   )}
 
                   {post.preferences?.moveInDate && (
-                    <p className="roommate-card__movein">
-                      <HiOutlineCalendarDays />Move-in: {post.preferences.moveInDate}
-                    </p>
+                    <p className="roommate-card__movein"><HiOutlineCalendarDays />Move-in: {post.preferences.moveInDate}</p>
                   )}
 
                   <div className="roommate-card__footer">
                     <div className="roommate-card__footer-left">
-                      {post.interests > 0 && (
-                        <span className="roommate-card__interests">
-                          <HiOutlineBolt />{post.interests} interested
-                        </span>
-                      )}
+                      {post.interests > 0 && <span className="roommate-card__interests"><HiOutlineBolt />{post.interests} interested</span>}
                     </div>
                     <div className="roommate-card__footer-actions">
                       <Link href={"/listings/" + post.listingId} className="roommate-card__listing-btn" title="View listing" target="_blank">
@@ -486,9 +391,7 @@ export default function RoommatesPage() {
                           </a>
                         </>
                       )}
-                      {!user && (
-                        <Link href="/login" className="roommate-card__interest-btn">Log in to contact</Link>
-                      )}
+                      {!user && <Link href="/login" className="roommate-card__interest-btn">Log in to contact</Link>}
                     </div>
                   </div>
                 </motion.div>

@@ -23,6 +23,11 @@ import {
   HiOutlineExclamationTriangle,
   HiOutlineArrowPath,
   HiOutlineArrowTrendingUp,
+  HiOutlineClipboardDocumentCheck,
+  HiOutlineCalendarDays,
+  HiOutlinePhone,
+  HiOutlineXCircle,
+  HiOutlineCheck,
 } from "react-icons/hi2";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -31,51 +36,38 @@ import {
   updateListingAvailability,
   renewListing,
 } from "@/lib/firestoreListings";
+import {
+  fetchInspectionsByLandlord,
+  updateInspectionStatus,
+} from "@/lib/firestoreInspections";
 import "@/styles/dashboard.css";
 
 const AVAILABILITY_OPTIONS = ["Available Now", "Available Soon", "Not Available"];
 const EXPIRY_DAYS = 90;
-const WARN_DAYS = 75;
+const WARN_DAYS   = 75;
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07 } },
-};
+const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
+const fadeUp  = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } } };
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
-};
-
-// ── Expiry helpers ────────────────────────────────────────
 function getListingAge(listing) {
   const base = listing.renewedAt ?? listing.createdAt;
   if (!base) return 0;
   const date = base.toDate ? base.toDate() : new Date(base);
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
 }
-
 function getExpiryStatus(listing) {
   const age = getListingAge(listing);
   if (age >= EXPIRY_DAYS) return "expired";
-  if (age >= WARN_DAYS) return "expiring";
+  if (age >= WARN_DAYS)   return "expiring";
   return "fresh";
 }
-
-function daysUntilExpiry(listing) {
-  return Math.max(0, EXPIRY_DAYS - getListingAge(listing));
-}
-
-// ── Conversion helpers ────────────────────────────────────
-// Returns one decimal place, e.g. 12.5. Returns null if no views.
+function daysUntilExpiry(listing) { return Math.max(0, EXPIRY_DAYS - getListingAge(listing)); }
 function getConversionRate(listing) {
   const views = Number(listing.views) || 0;
   const interests = Number(listing.interests) || 0;
   if (views === 0) return null;
   return Math.round((interests / views) * 1000) / 10;
 }
-
-// tier: "hot" | "good" | "low" | "neutral"
 function getConversionLabel(rate, views) {
   if (rate === null || views < 5) return { text: "Not enough data", tier: "neutral" };
   if (rate >= 15) return { text: "High demand", tier: "hot" };
@@ -88,14 +80,21 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, userRole, loading: authLoading } = useAuth();
 
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState(null);
-  const [updatingId, setUpdatingId] = useState(null);
-  const [renewingId, setRenewingId] = useState(null);
-  const [filter, setFilter] = useState("All");
-  const [sortBy, setSortBy] = useState("newest");
+  const [listings, setListings]       = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [deletingId, setDeletingId]   = useState(null);
+  const [updatingId, setUpdatingId]   = useState(null);
+  const [renewingId, setRenewingId]   = useState(null);
+  const [filter, setFilter]           = useState("All");
+  const [sortBy, setSortBy]           = useState("newest");
   const [dismissedBanner, setDismissedBanner] = useState(false);
+
+  // Inspections
+  const [inspections, setInspections]         = useState([]);
+  const [inspectionsLoading, setInspectionsLoading] = useState(true);
+  const [inspectFilter, setInspectFilter]     = useState("pending");
+  const [updatingInspectId, setUpdatingInspectId] = useState(null);
+  const [inspectToast, setInspectToast]       = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -118,6 +117,41 @@ export default function DashboardPage() {
     load();
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    async function loadInspections() {
+      setInspectionsLoading(true);
+      try {
+        const data = await fetchInspectionsByLandlord(user.uid);
+        setInspections(data);
+      } catch (e) {
+        console.error("Error loading inspections:", e);
+      } finally {
+        setInspectionsLoading(false);
+      }
+    }
+    loadInspections();
+  }, [user]);
+
+  function showInspectToast(msg, type = "success") {
+    setInspectToast({ msg, type });
+    setTimeout(() => setInspectToast(null), 3000);
+  }
+
+  async function handleInspectionStatus(id, status) {
+    setUpdatingInspectId(id);
+    try {
+      await updateInspectionStatus(id, status);
+      setInspections((prev) => prev.map((i) => i.id === id ? { ...i, status } : i));
+      showInspectToast(status === "confirmed" ? "Inspection confirmed." : "Inspection cancelled.");
+    } catch (e) {
+      console.error(e);
+      showInspectToast("Failed to update inspection.", "error");
+    } finally {
+      setUpdatingInspectId(null);
+    }
+  }
+
   if (authLoading || loading) {
     return (
       <main className="dashboard">
@@ -133,22 +167,26 @@ export default function DashboardPage() {
 
   if (!user || userRole !== "landlord") return null;
 
-  // ── Derived values ─────────────────────────────────────
   const expiredListings  = listings.filter((l) => getExpiryStatus(l) === "expired");
   const expiringListings = listings.filter((l) => getExpiryStatus(l) === "expiring");
   const needsAttention   = expiredListings.length + expiringListings.length;
   const highDemandCount  = listings.filter((l) => (getConversionRate(l) ?? 0) >= 15).length;
-
-  const totalViews     = listings.reduce((s, l) => s + (Number(l.views)     || 0), 0);
-  const totalInterests = listings.reduce((s, l) => s + (Number(l.interests) || 0), 0);
-  const availableCount = listings.filter((l) => l.availability === "Available Now").length;
-
+  const totalViews       = listings.reduce((s, l) => s + (Number(l.views) || 0), 0);
+  const totalInterests   = listings.reduce((s, l) => s + (Number(l.interests) || 0), 0);
+  const availableCount   = listings.filter((l) => l.availability === "Available Now").length;
   const listingsWithData = listings.filter((l) => (Number(l.views) || 0) >= 5);
   const avgConversion    = listingsWithData.length > 0
     ? Math.round(listingsWithData.reduce((s, l) => s + getConversionRate(l), 0) / listingsWithData.length * 10) / 10
     : null;
 
-  // ── Filter + Sort ──────────────────────────────────────
+  const pendingCount   = inspections.filter((i) => i.status === "pending").length;
+  const confirmedCount = inspections.filter((i) => i.status === "confirmed").length;
+
+  const filteredInspections = inspections.filter((i) => {
+    if (inspectFilter === "all") return true;
+    return i.status === inspectFilter;
+  });
+
   const filtered = listings
     .filter((l) => {
       if (filter === "All")         return true;
@@ -166,7 +204,6 @@ export default function DashboardPage() {
       return 0;
     });
 
-  // ── Handlers ──────────────────────────────────────────
   async function handleDelete(id) {
     if (!window.confirm("Delete this listing? This cannot be undone.")) return;
     setDeletingId(id);
@@ -195,12 +232,12 @@ export default function DashboardPage() {
     return d.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
   }
 
-  // ── Stat cards config ──────────────────────────────────
   const stats = [
-    { label: "Total Listings",          value: listings.length,              icon: <HiOutlineHomeModern />,     accent: "blue",  onClick: null },
-    { label: "Total Views",             value: totalViews.toLocaleString(),  icon: <HiOutlineEye />,            accent: "purple", onClick: () => setSortBy("views"),    tip: "Sort by most viewed" },
-    { label: "Expressions of Interest", value: totalInterests.toLocaleString(), icon: <HiOutlineBolt />,        accent: "amber",  onClick: () => setSortBy("interests"), tip: "Sort by most interest" },
-    { label: "Available Now",           value: availableCount,               icon: <HiOutlineCheckCircle />,    accent: "green",  onClick: () => setFilter("Available Now"), tip: "Filter available listings" },
+    { label: "Total Listings",          value: listings.length,                  icon: <HiOutlineHomeModern />,     accent: "blue"   },
+    { label: "Total Views",             value: totalViews.toLocaleString(),       icon: <HiOutlineEye />,            accent: "purple", onClick: () => setSortBy("views"),       tip: "Sort by most viewed" },
+    { label: "Expressions of Interest", value: totalInterests.toLocaleString(),  icon: <HiOutlineBolt />,           accent: "amber",  onClick: () => setSortBy("interests"),   tip: "Sort by most interest" },
+    { label: "Available Now",           value: availableCount,                   icon: <HiOutlineCheckCircle />,    accent: "green",  onClick: () => setFilter("Available Now"), tip: "Filter available listings" },
+    { label: "Pending Inspections",     value: pendingCount,                     icon: <HiOutlineClipboardDocumentCheck />, accent: pendingCount > 0 ? "amber" : "gray", onClick: () => setInspectFilter("pending"), tip: "View pending inspections" },
     {
       label:    "Avg Conversion",
       value:    avgConversion !== null ? avgConversion + "%" : "—",
@@ -215,25 +252,34 @@ export default function DashboardPage() {
   ];
 
   const filterTabs = [
-    { key: "All",           label: "All" },
-    { key: "Available Now", label: "Available Now" },
-    { key: "Available Soon",label: "Available Soon" },
-    { key: "Not Available", label: "Not Available" },
-    { key: "High Demand",   label: "High Demand",    hot:   highDemandCount > 0 },
-    { key: "Expiring",      label: "Needs Attention", alert: needsAttention > 0 },
+    { key: "All",            label: "All" },
+    { key: "Available Now",  label: "Available Now" },
+    { key: "Available Soon", label: "Available Soon" },
+    { key: "Not Available",  label: "Not Available" },
+    { key: "High Demand",    label: "High Demand",    hot:   highDemandCount > 0 },
+    { key: "Expiring",       label: "Needs Attention", alert: needsAttention > 0 },
   ];
 
   return (
     <main className="dashboard">
 
+      {/* ── Inspection Toast ── */}
+      <AnimatePresence>
+        {inspectToast && (
+          <motion.div
+            className={"dashboard__inspect-toast" + (inspectToast.type === "error" ? " error" : "")}
+            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+          >
+            {inspectToast.type === "error" ? <HiOutlineExclamationTriangle /> : <HiOutlineCheck />}
+            {inspectToast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Expiry Banner ── */}
       <AnimatePresence>
         {needsAttention > 0 && !dismissedBanner && (
-          <motion.div
-            className="dashboard__expiry-banner"
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}
-          >
+          <motion.div className="dashboard__expiry-banner" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
             <div className="dashboard__expiry-banner-inner">
               <HiOutlineExclamationTriangle className="dashboard__expiry-banner-icon" />
               <div className="dashboard__expiry-banner-text">
@@ -282,6 +328,99 @@ export default function DashboardPage() {
         ))}
       </motion.div>
 
+      {/* ── INSPECTIONS SECTION ── */}
+      <motion.div className="dashboard__inspections" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
+        <div className="dashboard__inspections-header">
+          <div className="dashboard__inspections-title">
+            <HiOutlineClipboardDocumentCheck />
+            <h2>Inspection Requests</h2>
+            {pendingCount > 0 && <span className="dashboard__inspections-badge">{pendingCount} pending</span>}
+          </div>
+          <div className="dashboard__inspections-tabs">
+            {[
+              { key: "pending",   label: "Pending",   count: pendingCount },
+              { key: "confirmed", label: "Confirmed", count: confirmedCount },
+              { key: "cancelled", label: "Cancelled", count: inspections.filter((i) => i.status === "cancelled").length },
+              { key: "all",       label: "All",       count: inspections.length },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                className={"dashboard__inspect-tab" + (inspectFilter === tab.key ? " active" : "")}
+                onClick={() => setInspectFilter(tab.key)}
+              >
+                {tab.label}
+                {tab.count > 0 && <span className="dashboard__inspect-tab-count">{tab.count}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {inspectionsLoading ? (
+          <div className="dashboard__inspections-loading">
+            <span className="dashboard__mini-spinner" />
+            <span>Loading inspections...</span>
+          </div>
+        ) : filteredInspections.length === 0 ? (
+          <div className="dashboard__inspections-empty">
+            <HiOutlineClipboardDocumentCheck />
+            <p>{inspectFilter === "pending" ? "No pending inspection requests." : "No inspections in this category."}</p>
+          </div>
+        ) : (
+          <div className="dashboard__inspections-list">
+            <AnimatePresence>
+              {filteredInspections.map((insp) => (
+                <motion.div
+                  key={insp.id}
+                  className={"dashboard__inspect-card dashboard__inspect-card--" + insp.status}
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.22 }}
+                >
+                  <div className="dashboard__inspect-card-left">
+                    <div className="dashboard__inspect-card-avatar">
+                      {(insp.tenantName || "?")[0].toUpperCase()}
+                    </div>
+                    <div className="dashboard__inspect-card-info">
+                      <p className="dashboard__inspect-card-name">
+                        {insp.tenantName}
+                        <span className={"dashboard__inspect-status dashboard__inspect-status--" + insp.status}>
+                          {insp.status}
+                        </span>
+                      </p>
+                      <p className="dashboard__inspect-card-listing">{insp.listingTitle}</p>
+                      <div className="dashboard__inspect-card-meta">
+                        <span><HiOutlineCalendarDays />{insp.date} at {insp.time}</span>
+                        {insp.tenantPhone && <span><HiOutlinePhone />{insp.tenantPhone}</span>}
+                      </div>
+                      {insp.note && <p className="dashboard__inspect-card-note">"{insp.note}"</p>}
+                    </div>
+                  </div>
+
+                  {insp.status === "pending" && (
+                    <div className="dashboard__inspect-card-actions">
+                      <button
+                        className="dashboard__inspect-confirm"
+                        onClick={() => handleInspectionStatus(insp.id, "confirmed")}
+                        disabled={updatingInspectId === insp.id}
+                      >
+                        <HiOutlineCheck />
+                        <span>Confirm</span>
+                      </button>
+                      <button
+                        className="dashboard__inspect-cancel"
+                        onClick={() => handleInspectionStatus(insp.id, "cancelled")}
+                        disabled={updatingInspectId === insp.id}
+                      >
+                        <HiOutlineXCircle />
+                        <span>Decline</span>
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </motion.div>
+
       {/* ── Controls ── */}
       <motion.div className="dashboard__controls" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25, duration: 0.3 }}>
         <div className="dashboard__filters">
@@ -294,15 +433,9 @@ export default function DashboardPage() {
               {tab.alert && <span className="dashboard__filter-alert-dot" />}
               {tab.hot   && <span className="dashboard__filter-hot-dot" />}
               {tab.label}
-              {tab.key === "High Demand" && highDemandCount > 0 && (
-                <span className="dashboard__filter-count dashboard__filter-count--hot">{highDemandCount}</span>
-              )}
-              {tab.key !== "All" && tab.key !== "Expiring" && tab.key !== "High Demand" && (
-                <span className="dashboard__filter-count">{listings.filter((l) => l.availability === tab.key).length}</span>
-              )}
-              {tab.key === "Expiring" && needsAttention > 0 && (
-                <span className="dashboard__filter-count dashboard__filter-count--alert">{needsAttention}</span>
-              )}
+              {tab.key === "High Demand" && highDemandCount > 0 && <span className="dashboard__filter-count dashboard__filter-count--hot">{highDemandCount}</span>}
+              {tab.key !== "All" && tab.key !== "Expiring" && tab.key !== "High Demand" && <span className="dashboard__filter-count">{listings.filter((l) => l.availability === tab.key).length}</span>}
+              {tab.key === "Expiring" && needsAttention > 0 && <span className="dashboard__filter-count dashboard__filter-count--alert">{needsAttention}</span>}
             </button>
           ))}
         </div>
@@ -340,12 +473,11 @@ export default function DashboardPage() {
               const isExpired  = status === "expired";
               const isExpiring = status === "expiring";
               const isRenewing = renewingId === listing.id;
-
-              const views    = Number(listing.views)     || 0;
-              const interests = Number(listing.interests) || 0;
-              const rate     = getConversionRate(listing);
+              const views      = Number(listing.views)     || 0;
+              const interests  = Number(listing.interests) || 0;
+              const rate       = getConversionRate(listing);
               const { text: convLabel, tier: convTier } = getConversionLabel(rate, views);
-              const barWidth = rate !== null ? Math.min(rate, 100) : 0;
+              const barWidth   = rate !== null ? Math.min(rate, 100) : 0;
 
               return (
                 <motion.div
@@ -354,7 +486,6 @@ export default function DashboardPage() {
                   variants={fadeUp} layout
                   exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.2 } }}
                 >
-                  {/* Thumb */}
                   <div className="dashboard__card-thumb">
                     {thumb ? <img src={thumb} alt={listing.title} />
                       : hasVideo ? <div className="dashboard__card-thumb-video"><HiOutlinePlayCircle /><span>Video</span></div>
@@ -364,7 +495,6 @@ export default function DashboardPage() {
                     {isExpiring && !isExpired && <span className="dashboard__card-expiry-badge dashboard__card-expiry-badge--expiring">{daysLeft}d left</span>}
                   </div>
 
-                  {/* Body */}
                   <div className="dashboard__card-body">
                     <div className="dashboard__card-top">
                       <div className="dashboard__card-info">
@@ -386,7 +516,6 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* Expiry prompt */}
                     {(isExpired || isExpiring) && (
                       <div className={"dashboard__expiry-prompt" + (isExpired ? " dashboard__expiry-prompt--expired" : " dashboard__expiry-prompt--expiring")}>
                         <div className="dashboard__expiry-prompt-left">
@@ -407,18 +536,13 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    {/* Stats row */}
                     <div className="dashboard__card-stats">
                       <div className="dashboard__card-stat"><HiOutlineEye /><span>{views} views</span></div>
                       <div className="dashboard__card-stat dashboard__card-stat--interest"><HiOutlineBolt /><span>{interests} interested</span></div>
-
-                      {/* ── Conversion insight ── */}
                       <div className={"dashboard__conversion dashboard__conversion--" + convTier}>
                         <div className="dashboard__conversion-top">
                           <span className="dashboard__conversion-label">{convLabel}</span>
-                          {rate !== null && views >= 5 && (
-                            <span className="dashboard__conversion-rate">{rate}%</span>
-                          )}
+                          {rate !== null && views >= 5 && <span className="dashboard__conversion-rate">{rate}%</span>}
                         </div>
                         {rate !== null && views >= 5 && (
                           <div className="dashboard__conversion-bar">
@@ -426,8 +550,6 @@ export default function DashboardPage() {
                           </div>
                         )}
                       </div>
-
-                      {/* Availability */}
                       <div className="dashboard__availability-wrap">
                         <select
                           className={"dashboard__availability-select " + (listing.availability === "Available Now" ? "available" : listing.availability === "Available Soon" ? "soon" : "unavailable")}
