@@ -1214,3 +1214,12 @@
   background: rgba(52,211,153,0.2);
   border-color: rgba(52,211,153,0.4);
 }
+.details-page__agent-link {
+  display: inline-block;
+  font-size: 0.82rem;
+  color: #4f6ef7;
+  text-decoration: none;
+  margin-top: 4px;
+  transition: color 0.2s;
+}
+.details-page__agent-link:hover { color: #818cf8; text-decoration: underline; }

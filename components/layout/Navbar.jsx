@@ -16,6 +16,7 @@ import {
   HiOutlineUserPlus,
   HiOutlineChartBarSquare,
   HiOutlineUserGroup,
+  HiOutlineBuildingOffice2,
   HiXMark,
   HiBars3,
 } from "react-icons/hi2";
@@ -112,7 +113,8 @@ export default function Navbar() {
 
       <div className={"navbar__drawer" + (menuOpen ? " open" : "")}>
         <div className="navbar__drawer-header">
-          <p className="navbar__drawer-logo">Dwe<span>lla</span></p>
+          {/* Fixed: was "Dwella", now "Velen" */}
+          <p className="navbar__drawer-logo">Vel<span>en</span></p>
           <div className="navbar__drawer-header-right">
             {user && <NotificationBell />}
             {user && <p className="navbar__drawer-user">👋 {user.displayName?.split(" ")[0]}</p>}
@@ -123,8 +125,9 @@ export default function Navbar() {
           <Link href="/" className={"navbar__drawer-link" + (isActive("/") ? " active" : "")} onClick={closeMenu}>
             <HiOutlineHome /><span>Home</span>
           </Link>
+          {/* Fixed: was using HiOutlineHome, now uses building icon */}
           <Link href="/listings" className={"navbar__drawer-link" + (isActive("/listings") ? " active" : "")} onClick={closeMenu}>
-            <HiOutlineHome /><span>Browse Listings</span>
+            <HiOutlineBuildingOffice2 /><span>Browse Listings</span>
           </Link>
           {userRole === "student" && (
             <Link href="/roommates" className={"navbar__drawer-link" + (isActive("/roommates") ? " active" : "")} onClick={closeMenu}>

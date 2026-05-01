@@ -10,6 +10,7 @@ import {
   HiOutlineBanknotes,
   HiOutlineUserGroup,
   HiOutlineClipboardDocumentCheck,
+  HiOutlineAcademicCap,
 } from "react-icons/hi2";
 import "@/styles/hero.css";
 
@@ -33,39 +34,36 @@ export default function Hero() {
       </div>
 
       <div className="hero__content">
+
         {/* Eyebrow */}
         <motion.div className="hero__eyebrow" {...fadeUp(0)}>
-          <HiOutlineMapPin />
-          <span>Port Harcourt, Nigeria</span>
+          <HiOutlineAcademicCap />
+          <span>Built for students in Port Harcourt</span>
           <span className="hero__eyebrow-dot" />
-          <span>No hidden fees</span>
+          <span>No agent fees</span>
         </motion.div>
 
         {/* Headline */}
         <motion.h1 {...fadeUp(0.08)}>
-          Find your next home
-          <span className="hero__headline-accent"> with confidence</span>
+          Student housing,
+          <span className="hero__headline-accent"> done right</span>
         </motion.h1>
 
         {/* Sub */}
         <motion.p className="hero__text" {...fadeUp(0.16)}>
-          Browse verified properties in Port Harcourt with transparent pricing,
-          real photos, and direct landlord contact. No agents, no surprises.
+          Find verified rooms and apartments near your campus in Port Harcourt.
+          See the full cost upfront, contact landlords directly, and split rent with a roommate —
+          no agents, no surprises.
         </motion.p>
 
         {/* CTAs */}
         <motion.div className="hero__actions" {...fadeUp(0.24)}>
           <Link href="/listings" className="hero__btn hero__btn--primary">
-            Explore Listings
+            Find Housing
           </Link>
           {!user && (
             <Link href="/signup" className="hero__btn hero__btn--secondary">
-              List Your Property
-            </Link>
-          )}
-          {userRole === "landlord" && (
-            <Link href="/add-listing" className="hero__btn hero__btn--secondary">
-              Post Property
+              Create Free Account
             </Link>
           )}
           {userRole === "student" && (
@@ -73,15 +71,20 @@ export default function Hero() {
               Find a Roommate
             </Link>
           )}
+          {userRole === "landlord" && (
+            <Link href="/add-listing" className="hero__btn hero__btn--secondary">
+              Post Property
+            </Link>
+          )}
         </motion.div>
 
         {/* Feature pills */}
         <motion.div className="hero__pills" {...fadeUp(0.32)}>
           {[
-            { icon: <HiOutlineShieldCheck />,              label: "Verified listings" },
-            { icon: <HiOutlineBanknotes />,                label: "Transparent pricing" },
-            { icon: <HiOutlineUserGroup />,                label: "Roommate matching" },
-            { icon: <HiOutlineClipboardDocumentCheck />,   label: "Book inspections" },
+            { icon: <HiOutlineShieldCheck />,            label: "Verified listings" },
+            { icon: <HiOutlineBanknotes />,              label: "No hidden fees" },
+            { icon: <HiOutlineUserGroup />,              label: "Split rent" },
+            { icon: <HiOutlineClipboardDocumentCheck />, label: "Book inspections" },
           ].map((pill) => (
             <div key={pill.label} className="hero__pill">
               {pill.icon}
@@ -93,20 +96,21 @@ export default function Hero() {
         {/* Stats */}
         <motion.div className="hero__stats" {...fadeUp(0.4)}>
           <div className="hero__stat">
-            <strong>100%</strong>
-            <span>Transparent fees</span>
+            <strong>RSU · UniPort</strong>
+            <span>Near your campus</span>
           </div>
           <div className="hero__stat-divider" />
           <div className="hero__stat">
-            <strong>Port Harcourt</strong>
-            <span>Student housing focus</span>
+            <strong>Zero agent fees</strong>
+            <span>Direct to landlord</span>
           </div>
           <div className="hero__stat-divider" />
           <div className="hero__stat">
-            <strong>Direct contact</strong>
-            <span>WhatsApp landlords</span>
+            <strong>Split-ready</strong>
+            <span>Roommate board included</span>
           </div>
         </motion.div>
+
       </div>
     </section>
   );

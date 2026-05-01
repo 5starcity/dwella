@@ -21,13 +21,14 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { fetchListings } from "@/lib/firestoreListings";
 import { createRoommatePost } from "@/lib/firestoreRoommates";
+import { UNIVERSITIES } from "@/lib/locations";
+import { trackEvent } from "@/lib/posthog";
 import "@/styles/roommate-post.css";
 
 export default function PostRoommatePage() {
   const { user, userRole } = useAuth();
   const router = useRouter();
 
-  // Listing search
   const [query, setQuery] = useState("");
   const [allListings, setAllListings] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -35,31 +36,30 @@ export default function PostRoommatePage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Form fields
   const [message, setMessage] = useState("");
   const [contact, setContact] = useState("");
+  const [school, setSchool] = useState("");
   const [prefGender, setPrefGender] = useState("No preference");
   const [prefOccupation, setPrefOccupation] = useState("Any");
   const [prefLifestyle, setPrefLifestyle] = useState("No preference");
   const [moveInDate, setMoveInDate] = useState("");
 
-  // UI state
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // Redirect if not student
   useEffect(() => {
+    if (userRole === undefined || user === undefined) return;
+    setAuthChecked(true);
+    if (!user) { router.push("/login"); return; }
     if (userRole && userRole !== "student") router.push("/roommates");
-    if (!user) router.push("/login");
   }, [user, userRole]);
 
-  // Pre-fill contact from user profile
   useEffect(() => {
     if (user?.phoneNumber) setContact(user.phoneNumber);
   }, [user]);
 
-  // Load all listings once
   useEffect(() => {
     async function load() {
       try {
@@ -72,7 +72,6 @@ export default function PostRoommatePage() {
     load();
   }, []);
 
-  // Filter suggestions as user types
   useEffect(() => {
     if (query.trim().length < 2) {
       setSuggestions([]);
@@ -81,17 +80,15 @@ export default function PostRoommatePage() {
     }
     const q = query.toLowerCase();
     const matches = allListings
-      .filter(
-        (l) =>
-          l.title?.toLowerCase().includes(q) ||
-          l.location?.toLowerCase().includes(q)
+      .filter((l) =>
+        l.title?.toLowerCase().includes(q) ||
+        l.location?.toLowerCase().includes(q)
       )
       .slice(0, 6);
     setSuggestions(matches);
     setShowDropdown(matches.length > 0);
   }, [query, allListings]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -116,20 +113,21 @@ export default function PostRoommatePage() {
   async function handleSubmit() {
     setError("");
     if (!selectedListing) { setError("Please search and select a listing."); return; }
-    if (!contact.trim()) { setError("Please enter your WhatsApp contact number."); return; }
+    if (!contact.trim())  { setError("Please enter your WhatsApp contact number."); return; }
 
     setSubmitting(true);
     try {
       await createRoommatePost({
         listingId:       selectedListing.id,
-        listingTitle:    selectedListing.title                                                         || "Untitled Listing",
+        listingTitle:    selectedListing.title    || "Untitled Listing",
         listingLocation: selectedListing.location || selectedListing.area || selectedListing.neighbourhood || "Port Harcourt",
-        listingPrice:    selectedListing.price                                                         || 0,
-        listingType:     selectedListing.type                                                          || "",
+        listingPrice:    selectedListing.price    || 0,
+        listingType:     selectedListing.type     || "",
         postedBy:        user.uid,
-        posterName:      user.displayName                                                              || "Anonymous",
+        posterName:      user.displayName         || "Anonymous",
         posterContact:   contact.trim(),
         message:         message.trim(),
+        school:          school || "",
         preferences: {
           gender:     prefGender     || "No preference",
           occupation: prefOccupation || "Any",
@@ -137,6 +135,15 @@ export default function PostRoommatePage() {
           moveInDate: moveInDate     || "",
         },
       });
+
+      trackEvent("roommate_post_created", {
+        listingId:    selectedListing.id,
+        listingTitle: selectedListing.title,
+        location:     selectedListing.location,
+        school,
+        splitCost:    Math.ceil(Number(selectedListing.price || 0) / 2),
+      });
+
       setSubmitted(true);
     } catch (e) {
       console.error("Post error:", e);
@@ -144,6 +151,30 @@ export default function PostRoommatePage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function resetForm() {
+    setSubmitted(false);
+    setSelectedListing(null);
+    setQuery("");
+    setMessage("");
+    setContact("");
+    setSchool("");
+    setPrefGender("No preference");
+    setPrefOccupation("Any");
+    setPrefLifestyle("No preference");
+    setMoveInDate("");
+    setError("");
+  }
+
+  if (!authChecked) {
+    return (
+      <main className="roommate-post-page">
+        <div className="roommate-post-page__auth-loading">
+          <p>Checking access...</p>
+        </div>
+      </main>
+    );
   }
 
   if (submitted) {
@@ -164,20 +195,7 @@ export default function PostRoommatePage() {
             <Link href="/roommates" className="roommate-post-page__back-btn">
               View the board
             </Link>
-            <button
-              className="roommate-post-page__another-btn"
-              onClick={() => {
-                setSubmitted(false);
-                setSelectedListing(null);
-                setQuery("");
-                setMessage("");
-                setContact("");
-                setPrefGender("No preference");
-                setPrefOccupation("Any");
-                setPrefLifestyle("No preference");
-                setMoveInDate("");
-              }}
-            >
+            <button className="roommate-post-page__another-btn" onClick={resetForm}>
               Post another
             </button>
           </div>
@@ -188,7 +206,7 @@ export default function PostRoommatePage() {
 
   return (
     <main className="roommate-post-page">
-      {/* Header */}
+
       <motion.div
         className="roommate-post-page__header"
         initial={{ opacity: 0, y: 16 }}
@@ -214,7 +232,7 @@ export default function PostRoommatePage() {
         transition={{ duration: 0.45, delay: 0.1 }}
       >
 
-        {/* ── Section 1: Listing ── */}
+        {/* Section 1 — Listing */}
         <div className="roommate-post-page__section">
           <div className="roommate-post-page__section-label">
             <HiOutlineHomeModern />
@@ -265,7 +283,6 @@ export default function PostRoommatePage() {
             )}
           </div>
 
-          {/* Pre-fill preview card */}
           {selectedListing && (
             <motion.div
               className="roommate-post-page__preview"
@@ -295,7 +312,7 @@ export default function PostRoommatePage() {
           )}
         </div>
 
-        {/* ── Section 2: Contact ── */}
+        {/* Section 2 — Contact */}
         <div className="roommate-post-page__section">
           <div className="roommate-post-page__section-label">
             <HiOutlinePhone />
@@ -313,7 +330,7 @@ export default function PostRoommatePage() {
           </p>
         </div>
 
-        {/* ── Section 3: Message ── */}
+        {/* Section 3 — Message */}
         <div className="roommate-post-page__section">
           <div className="roommate-post-page__section-label">
             <HiOutlineChatBubbleBottomCenterText />
@@ -330,7 +347,7 @@ export default function PostRoommatePage() {
           <p className="roommate-post-page__char-count">{message.length}/280</p>
         </div>
 
-        {/* ── Section 4: Preferences ── */}
+        {/* Section 4 — Preferences */}
         <div className="roommate-post-page__section">
           <div className="roommate-post-page__section-label">
             <HiOutlineSparkles />
@@ -368,6 +385,16 @@ export default function PostRoommatePage() {
             </div>
 
             <div className="roommate-post-page__pref-field">
+              <label>Your university</label>
+              <select value={school} onChange={(e) => setSchool(e.target.value)}>
+                <option value="">Select school</option>
+                {UNIVERSITIES.filter((u) => u.value !== "All").map((u) => (
+                  <option key={u.value} value={u.value}>{u.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="roommate-post-page__pref-field">
               <label>Preferred move-in date</label>
               <div className="roommate-post-page__date-wrap">
                 <HiOutlineCalendarDays />
@@ -382,12 +409,16 @@ export default function PostRoommatePage() {
           </div>
         </div>
 
-        {/* Error */}
         {error && (
-          <p className="roommate-post-page__error">{error}</p>
+          <motion.p
+            className="roommate-post-page__error"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {error}
+          </motion.p>
         )}
 
-        {/* Submit */}
         <button
           className="roommate-post-page__submit"
           onClick={handleSubmit}
@@ -395,6 +426,7 @@ export default function PostRoommatePage() {
         >
           {submitting ? "Publishing..." : "Publish Roommate Request"}
         </button>
+
       </motion.div>
     </main>
   );

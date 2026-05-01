@@ -279,3 +279,59 @@
       font-size: 0.88rem;
     }
   }
+  /* Scam warning */
+.listing-card__scam-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(234, 179, 8, 0.12);
+  border-bottom: 1px solid rgba(234, 179, 8, 0.25);
+  color: #eab308;
+  font-size: 0.72rem;
+  padding: 7px 12px;
+}
+
+.listing-card__scam-warning svg {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+/* Report button */
+.listing-card__report {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.listing-card__report:hover {
+  color: #ef4444;
+}
+
+.listing-card__report.reported {
+  color: #ef4444;
+  cursor: default;
+}
+
+.listing-card__report svg {
+  width: 13px;
+  height: 13px;
+}
+.listing-card__agent {
+  font-size: 0.78rem;
+  color: #4f6ef7;
+  text-decoration: none;
+  display: block;
+  margin-top: 2px;
+  transition: color 0.2s;
+}
+.listing-card__agent:hover { color: #818cf8; text-decoration: underline; }

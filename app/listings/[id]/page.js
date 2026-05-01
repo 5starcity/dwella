@@ -31,6 +31,7 @@ import {
   HiOutlineCog6Tooth,
   HiOutlineClipboardDocumentCheck,
   HiOutlineUserGroup,
+  HiOutlineUserCircle,
 } from "react-icons/hi2";
 import {
   fetchListingById,
@@ -45,6 +46,7 @@ import { fetchRoommatePostsByListing } from "@/lib/firestoreRoommates";
 import { getFavorites, toggleFavorite } from "@/lib/favorites";
 import { useAuth } from "@/context/AuthContext";
 import { isLandlordVerified } from "@/lib/verification";
+import { trackEvent } from "@/lib/posthog";
 import "@/styles/details-page.css";
 
 export default function ListingDetailsPage() {
@@ -103,7 +105,6 @@ export default function ListingDetailsPage() {
     loadListing();
   }, [listingId]);
 
-  // Check for roommate post on this listing
   useEffect(() => {
     if (!listingId) return;
     async function checkRoommate() {
@@ -217,6 +218,11 @@ export default function ListingDetailsPage() {
       setReportSent(true);
       setShowReportBox(false);
       setReportReason("");
+      trackEvent("listing_reported", {
+        listingId,
+        listingTitle: listing.title,
+        reason:       reportReason,
+      });
     } catch (error) {
       console.error("Error reporting listing:", error);
     }
@@ -240,12 +246,13 @@ export default function ListingDetailsPage() {
       } catch (e) {
         console.warn("Notification failed silently:", e);
       }
-      const tenantName     = user.displayName || "A prospective tenant";
-      const message        = `Hi, I found your listing "${listing.title}" on Velen and I am interested. My name is ${tenantName}.`;
-      const encodedMessage = encodeURIComponent(message);
-      const waUrl          = "https://wa.me/" + whatsappNumber + "?text=" + encodedMessage;
       setInterestSent(true);
-      window.open(waUrl, "_blank");
+      trackEvent("express_interest", {
+        listingId,
+        listingTitle: listing.title,
+        location:     listing.location,
+        price:        listing.price,
+      });
     } catch (error) {
       console.error("Error expressing interest:", error);
     } finally {
@@ -255,7 +262,12 @@ export default function ListingDetailsPage() {
 
   function handleBookInspection() {
     if (!user) { router.push("/login"); return; }
-    router.push(`/inspect/${listingId}`);
+    trackEvent("inspection_click", {
+      listingId,
+      listingTitle: listing.title,
+      location:     listing.location,
+    });
+    router.push("/inspect/" + listingId);
   }
 
   function formatDate(ts) {
@@ -346,6 +358,18 @@ export default function ListingDetailsPage() {
                 <div>
                   <p className="details-page__tag">Property Details</p>
                   <h1>{listing.title}</h1>
+
+                  {/* Agent link */}
+                  {listing.landlordId && (listing.landlordName || listing.agentName) && (
+                    <Link
+                      href={"/agent/" + listing.landlordId}
+                      className="details-page__agent-link"
+                    >
+                      <HiOutlineUserCircle />
+                      Listed by {listing.landlordName || listing.agentName}
+                    </Link>
+                  )}
+
                   <p className="details-page__location"><HiOutlineMapPin /><span>{listing.location}</span></p>
                   {listing.address && <p className="details-page__address-text">{listing.address}</p>}
                   <div className="details-page__meta">
@@ -470,14 +494,12 @@ export default function ListingDetailsPage() {
                   </a>
                 </div>
 
-                {/* ── Book Inspection ── */}
                 {!isOwner && (
                   <button className="details-page__inspect-btn" onClick={handleBookInspection}>
                     <HiOutlineClipboardDocumentCheck /> Book Inspection
                   </button>
                 )}
 
-                {/* ── Roommate CTA ── */}
                 {roommatePost && !isOwner && (
                   <div className="details-page__roommate-cta">
                     <div className="details-page__roommate-cta-left">
@@ -502,7 +524,7 @@ export default function ListingDetailsPage() {
                     </button>
                   ) : (
                     <div className="details-page__interest-sent">
-                      <p>✅ Interest sent! The property owner has been notified on WhatsApp.</p>
+                      <p>✅ Interest sent! The property owner has been notified.</p>
                     </div>
                   )}
                   {!user && <p className="details-page__interest-note"><a href="/login">Log in</a> to express interest in this property.</p>}

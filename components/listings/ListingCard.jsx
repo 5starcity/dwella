@@ -11,17 +11,27 @@ import {
   HiOutlineHeart,
   HiHeart,
   HiOutlinePlayCircle,
+  HiOutlineExclamationTriangle,
+  HiOutlineFlag,
 } from "react-icons/hi2";
 import { toggleFavorite, getFavorites } from "@/lib/favorites";
 import { getListingTags } from "@/lib/listingTags";
 import ListingTag from "@/components/listings/ListingTag";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import "@/styles/listing-card.css";
 import "@/styles/listing-tag.css";
+
+// Listings below this price are flagged as suspiciously cheap
+const SCAM_PRICE_THRESHOLD = 50000;
 
 export default function ListingCard({ listing }) {
   const [saved, setSaved] = useState(() =>
     getFavorites().includes(listing.id)
   );
+  const [reported, setReported] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   function handleFavorite(e) {
     e.preventDefault();
@@ -30,16 +40,54 @@ export default function ListingCard({ listing }) {
     setSaved(updated.includes(listing.id));
   }
 
+  async function handleReport(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (reported || reporting) return;
+
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) {
+      alert("You need to be logged in to report a listing.");
+      return;
+    }
+
+    setReporting(true);
+    try {
+      await addDoc(collection(db, "reports"), {
+        listingId: listing.id,
+        listingTitle: listing.title || "",
+        reportedBy: user.uid,
+        reason: "Flagged by user from listing card",
+        createdAt: serverTimestamp(),
+      });
+      setReported(true);
+    } catch (err) {
+      console.error("Report failed:", err);
+      alert("Could not submit report. Try again.");
+    } finally {
+      setReporting(false);
+    }
+  }
+
   const thumb = listing.images?.[0] || listing.image || null;
   const hasVideo = !!listing.videoUrl;
-
-  // Smart tags — show max 3 on card to avoid crowding
   const tags = getListingTags(listing, { max: 3 });
+  const isScamRisk =
+    !listing.verified && Number(listing.price) > 0 && Number(listing.price) < SCAM_PRICE_THRESHOLD;
 
   return (
     <Link href={"/listings/" + listing.id} className="listing-card">
 
-      {/* ── Thumbnail ── */}
+      {/* Scam warning banner */}
+      {isScamRisk && (
+        <div className="listing-card__scam-warning" onClick={(e) => e.preventDefault()}>
+          <HiOutlineExclamationTriangle />
+          <span>Price seems unusually low — verify before paying</span>
+        </div>
+      )}
+
+      {/* Thumbnail */}
       <div className="listing-card__thumb">
         {thumb ? (
           <img src={thumb} alt={listing.title} loading="lazy" />
@@ -54,7 +102,6 @@ export default function ListingCard({ listing }) {
           </div>
         )}
 
-        {/* Favourite button */}
         <button
           className={"listing-card__fav" + (saved ? " active" : "")}
           onClick={handleFavorite}
@@ -63,7 +110,6 @@ export default function ListingCard({ listing }) {
           {saved ? <HiHeart /> : <HiOutlineHeart />}
         </button>
 
-        {/* Tags strip — overlaid on image bottom */}
         {tags.length > 0 && (
           <div className="listing-card__tags">
             {tags.map((tag) => (
@@ -73,10 +119,8 @@ export default function ListingCard({ listing }) {
         )}
       </div>
 
-      {/* ── Body ── */}
+      {/* Body */}
       <div className="listing-card__body">
-
-        {/* Price */}
         <div className="listing-card__price-row">
           <p className="listing-card__price">
             ₦{Number(listing.price).toLocaleString()}
@@ -89,39 +133,40 @@ export default function ListingCard({ listing }) {
           )}
         </div>
 
-        {/* Title */}
         <h3 className="listing-card__title">{listing.title}</h3>
 
-        {/* Location */}
+{/* Clickable agent name — uses span + onClick to avoid nested <a> */}
+{listing.landlordId && listing.landlordName && (
+  <span
+    className="listing-card__agent"
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = "/agent/" + listing.landlordId;
+    }}
+  >
+    {listing.landlordName}
+  </span>
+)}
         <p className="listing-card__location">
           <HiOutlineMapPin />
           {listing.location}
         </p>
 
-        {/* Facts row */}
         <div className="listing-card__facts">
-          {listing.type && (
-            <span><HiOutlineHomeModern />{listing.type}</span>
-          )}
-          {listing.beds && (
-            <span>{listing.beds} Bed</span>
-          )}
-          {listing.baths && (
-            <span>{listing.baths} Bath</span>
-          )}
-          {listing.furnishing && (
-            <span>{listing.furnishing}</span>
-          )}
+          {listing.type && <span><HiOutlineHomeModern />{listing.type}</span>}
+          {listing.beds && <span>{listing.beds} Bed</span>}
+          {listing.baths && <span>{listing.baths} Bath</span>}
+          {listing.furnishing && <span>{listing.furnishing}</span>}
         </div>
 
-        {/* Stats */}
         <div className="listing-card__stats">
-          {(listing.views > 0) && (
+          {listing.views > 0 && (
             <span className="listing-card__stat">
               <HiOutlineEye />{listing.views}
             </span>
           )}
-          {(listing.interests > 0) && (
+          {listing.interests > 0 && (
             <span className="listing-card__stat listing-card__stat--interest">
               <HiOutlineBolt />{listing.interests}
             </span>
@@ -129,12 +174,23 @@ export default function ListingCard({ listing }) {
           <span
             className={
               "listing-card__availability " +
-              (listing.availability === "Available Now"  ? "available" :
-               listing.availability === "Available Soon" ? "soon"      : "unavailable")
+              (listing.availability === "Available Now" ? "available" :
+               listing.availability === "Available Soon" ? "soon" : "unavailable")
             }
           >
             {listing.availability || "Check availability"}
           </span>
+
+          {/* Report button */}
+          <button
+            className={"listing-card__report" + (reported ? " reported" : "")}
+            onClick={handleReport}
+            aria-label="Report listing"
+            disabled={reported || reporting}
+          >
+            <HiOutlineFlag />
+            <span>{reported ? "Reported" : "Report"}</span>
+          </button>
         </div>
       </div>
     </Link>

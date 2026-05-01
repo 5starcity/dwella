@@ -1,7 +1,10 @@
+// app/layout.js
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PageTransition from "@/components/layout/PageTransition";
+import PostHogProvider from "@/components/layout/PostHogProvider";
+import { Suspense } from "react";
 import "./global.css";
 
 export const metadata = {
@@ -14,6 +17,9 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <AuthProvider>
+          <Suspense fallback={null}>
+            <PostHogProvider />
+          </Suspense>
           <Navbar />
           <PageTransition>
             {children}

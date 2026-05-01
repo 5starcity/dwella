@@ -20,6 +20,7 @@ import { useAuth } from "@/context/AuthContext";
 import { fetchListingById } from "@/lib/firestoreListings";
 import { bookInspection } from "@/lib/firestoreInspections";
 import { createNotification } from "@/lib/firestoreNotifications";
+import { trackEvent } from "@/lib/posthog";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import "@/styles/inspect.css";
@@ -38,10 +39,10 @@ export default function InspectionBookingPage() {
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [date, setDate]       = useState("");
-  const [time, setTime]       = useState("");
-  const [phone, setPhone]     = useState("");
-  const [note, setNote]       = useState("");
+  const [date, setDate]   = useState("");
+  const [time, setTime]   = useState("");
+  const [phone, setPhone] = useState("");
+  const [note, setNote]   = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted]   = useState(false);
@@ -66,7 +67,6 @@ export default function InspectionBookingPage() {
     load();
   }, [listingId]);
 
-  // Pre-fill phone from Firestore profile
   useEffect(() => {
     if (!user) return;
     async function loadPhone() {
@@ -82,8 +82,8 @@ export default function InspectionBookingPage() {
 
   async function handleSubmit() {
     setError("");
-    if (!date)  { setError("Please select a date."); return; }
-    if (!time)  { setError("Please select a time slot."); return; }
+    if (!date)         { setError("Please select a date."); return; }
+    if (!time)         { setError("Please select a time slot."); return; }
     if (!phone.trim()) { setError("Please enter your phone number."); return; }
 
     setSubmitting(true);
@@ -100,7 +100,6 @@ export default function InspectionBookingPage() {
         note: note.trim(),
       });
 
-      // Notify landlord
       try {
         await createNotification({
           userId:     listing.landlordId,
@@ -115,14 +114,13 @@ export default function InspectionBookingPage() {
         console.warn("Notification failed silently:", e);
       }
 
-      // WhatsApp the landlord too
-      const waNum = typeof listing.contact === "string" && listing.contact.startsWith("0")
-        ? "234" + listing.contact.slice(1)
-        : listing.contact;
-      const msg = encodeURIComponent(
-        `Hi, I just booked an inspection for your property "${listing.title}" on ${date} at ${time}. My name is ${user.displayName || "a prospective tenant"} and my number is ${phone}.`
-      );
-      window.open(`https://wa.me/${waNum}?text=${msg}`, "_blank");
+      trackEvent("inspection_booked", {
+        listingId,
+        listingTitle: listing.title,
+        location:     listing.location,
+        date,
+        time,
+      });
 
       setSubmitted(true);
     } catch (e) {
@@ -133,7 +131,6 @@ export default function InspectionBookingPage() {
     }
   }
 
-  // Min date = tomorrow
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 1);
   const minDateStr = minDate.toISOString().split("T")[0];
@@ -170,11 +167,20 @@ export default function InspectionBookingPage() {
         >
           <div className="inspect-page__success-icon"><HiOutlineCheckCircle /></div>
           <h1>Inspection booked!</h1>
-          <p>Your inspection for <strong>{listing.title}</strong> is scheduled for <strong>{date}</strong> at <strong>{time}</strong>.</p>
-          <p className="inspect-page__success-note">The landlord has been notified via WhatsApp. They will confirm shortly.</p>
+          <p>
+            Your inspection for <strong>{listing.title}</strong> is scheduled
+            for <strong>{date}</strong> at <strong>{time}</strong>.
+          </p>
+          <p className="inspect-page__success-note">
+            The landlord has been notified and will confirm your visit shortly.
+          </p>
           <div className="inspect-page__success-actions">
-            <Link href={`/listings/${listingId}`} className="inspect-page__back-btn">Back to listing</Link>
-            <Link href="/listings" className="inspect-page__browse-btn">Browse more</Link>
+            <Link href={"/listings/" + listingId} className="inspect-page__back-btn">
+              Back to listing
+            </Link>
+            <Link href="/my-inspections" className="inspect-page__browse-btn">
+              View my inspections
+            </Link>
           </div>
         </motion.div>
       </main>
@@ -183,30 +189,48 @@ export default function InspectionBookingPage() {
 
   return (
     <main className="inspect-page">
-      <motion.div className="inspect-page__header" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <Link href={`/listings/${listingId}`} className="inspect-page__back">
+      <motion.div
+        className="inspect-page__header"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <Link href={"/listings/" + listingId} className="inspect-page__back">
           <HiOutlineArrowLeft /> Back to listing
         </Link>
         <p className="inspect-page__eyebrow">
           <HiOutlineClipboardDocumentCheck /> Book Inspection
         </p>
         <h1>Schedule a visit</h1>
-        <p className="inspect-page__sub">Pick a date and time to visit this property in person.</p>
+        <p className="inspect-page__sub">
+          Pick a date and time to visit this property in person.
+        </p>
       </motion.div>
 
-      {/* Listing preview */}
-      <motion.div className="inspect-page__listing-preview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.07 }}>
+      <motion.div
+        className="inspect-page__listing-preview"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.07 }}
+      >
         <div className="inspect-page__listing-icon"><HiOutlineHomeModern /></div>
         <div className="inspect-page__listing-info">
           <p className="inspect-page__listing-title">{listing.title}</p>
-          <p className="inspect-page__listing-location"><HiOutlineMapPin />{listing.location}</p>
+          <p className="inspect-page__listing-location">
+            <HiOutlineMapPin />{listing.location}
+          </p>
         </div>
-        <p className="inspect-page__listing-price">₦{Number(listing.price).toLocaleString()}<span>/yr</span></p>
+        <p className="inspect-page__listing-price">
+          ₦{Number(listing.price).toLocaleString()}<span>/yr</span>
+        </p>
       </motion.div>
 
-      <motion.div className="inspect-page__form" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.12 }}>
-
-        {/* Date */}
+      <motion.div
+        className="inspect-page__form"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.12 }}
+      >
         <div className="inspect-page__section">
           <div className="inspect-page__section-label">
             <HiOutlineCalendarDays /> Preferred date
@@ -223,7 +247,6 @@ export default function InspectionBookingPage() {
           </div>
         </div>
 
-        {/* Time slots */}
         <div className="inspect-page__section">
           <div className="inspect-page__section-label">
             <HiOutlineClock /> Preferred time
@@ -242,7 +265,6 @@ export default function InspectionBookingPage() {
           </div>
         </div>
 
-        {/* Phone */}
         <div className="inspect-page__section">
           <div className="inspect-page__section-label">
             <HiOutlinePhone /> Your phone number
@@ -259,7 +281,6 @@ export default function InspectionBookingPage() {
           </div>
         </div>
 
-        {/* Note */}
         <div className="inspect-page__section">
           <div className="inspect-page__section-label">
             <HiOutlineChatBubbleBottomCenterText /> Note <em>(optional)</em>
@@ -277,12 +298,16 @@ export default function InspectionBookingPage() {
 
         {error && <p className="inspect-page__error">{error}</p>}
 
-        <button className="inspect-page__submit" onClick={handleSubmit} disabled={submitting}>
+        <button
+          className="inspect-page__submit"
+          onClick={handleSubmit}
+          disabled={submitting}
+        >
           {submitting ? "Booking..." : "Confirm Inspection"}
         </button>
 
         <p className="inspect-page__disclaimer">
-          The landlord will be notified immediately via WhatsApp and in-app. They will confirm or suggest an alternate time.
+          The landlord will be notified immediately in-app and will confirm or suggest an alternate time.
         </p>
       </motion.div>
     </main>

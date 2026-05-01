@@ -30,7 +30,7 @@ import {
   markRoommatePostFilled,
 } from "@/lib/firestoreRoommates";
 import { createNotification } from "@/lib/firestoreNotifications";
-import { LOCATION_FILTER_OPTIONS } from "@/lib/locations";
+import { LOCATION_FILTER_OPTIONS, UNIVERSITIES } from "@/lib/locations";
 import "@/styles/roommates.css";
 
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };

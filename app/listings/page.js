@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import ListingCard from "@/components/listings/ListingCard";
 import FilterBar from "@/components/listings/FilterBar";
 import { fetchListings } from "@/lib/firestoreListings";
-import { LOCATION_FILTER_OPTIONS } from "@/lib/locations";
+import { LOCATION_FILTER_OPTIONS, UNIVERSITY_AREA_MAP } from "@/lib/locations";
 import "@/styles/listings-page.css";
 
 const containerVariants = {
@@ -23,9 +23,12 @@ export default function ListingsPage() {
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("All");
   const [type, setType] = useState("All");
-  const [price, setPrice] = useState("All");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
   const [verified, setVerified] = useState(false);
   const [availability, setAvailability] = useState("All");
+  const [sharedOnly, setSharedOnly] = useState(false);
+  const [university, setUniversity] = useState("All");
   const [allListings, setAllListings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,53 +48,77 @@ export default function ListingsPage() {
   }, []);
 
   const filteredListings = useMemo(() => {
+    const min = priceMin !== "" ? Number(priceMin) : null;
+    const max = priceMax !== "" ? Number(priceMax) : null;
+    const uniAreas = university !== "All" ? (UNIVERSITY_AREA_MAP[university] || []) : [];
+
     return allListings.filter((listing) => {
       const title = listing.title?.toLowerCase() || "";
       const listingLocation = listing.location?.toLowerCase() || "";
-      const listingType = listing.type || "";
       const listingPrice = Number(listing.price) || 0;
 
       const matchesSearch =
         title.includes(search.toLowerCase()) ||
         listingLocation.includes(search.toLowerCase());
+
       const matchesLocation =
         location === "All" || listing.location === location;
+
       const matchesType =
-        type === "All" || listingType === type;
-      const matchesPrice =
-        price === "All" || listingPrice <= Number(price);
-      const matchesVerified =
-        !verified || listing.verified === true;
+        type === "All" || listing.type === type;
+
+      const matchesPriceMin = min === null || listingPrice >= min;
+      const matchesPriceMax = max === null || listingPrice <= max;
+
+      const matchesVerified = !verified || listing.verified === true;
+
       const matchesAvailability =
         availability === "All" || listing.availability === availability;
+
+      const matchesShared =
+        !sharedOnly || listing.type === "Shared Room";
+
+      // University filter — use nearSchool field if exists, else fallback to area map
+      const matchesUniversity =
+        university === "All" ||
+        listing.nearSchool === university ||
+        (uniAreas.length > 0 && uniAreas.includes(listing.location));
 
       return (
         matchesSearch &&
         matchesLocation &&
         matchesType &&
-        matchesPrice &&
+        matchesPriceMin &&
+        matchesPriceMax &&
         matchesVerified &&
-        matchesAvailability
+        matchesAvailability &&
+        matchesShared &&
+        matchesUniversity
       );
     });
-  }, [allListings, search, location, type, price, verified, availability]);
+  }, [allListings, search, location, type, priceMin, priceMax, verified, availability, sharedOnly, university]);
 
   const activeFilterCount = [
     search !== "",
     location !== "All",
     type !== "All",
-    price !== "All",
+    priceMin !== "" || priceMax !== "",
     verified,
     availability !== "All",
+    sharedOnly,
+    university !== "All",
   ].filter(Boolean).length;
 
   function handleClearFilters() {
     setSearch("");
     setLocation("All");
     setType("All");
-    setPrice("All");
+    setPriceMin("");
+    setPriceMax("");
     setVerified(false);
     setAvailability("All");
+    setSharedOnly(false);
+    setUniversity("All");
   }
 
   return (
@@ -113,26 +140,21 @@ export default function ListingsPage() {
         transition={{ duration: 0.4, delay: 0.1 }}
       >
         <FilterBar
-          search={search}
-          setSearch={setSearch}
-          location={location}
-          setLocation={setLocation}
-          type={type}
-          setType={setType}
-          price={price}
-          setPrice={setPrice}
-          verified={verified}
-          setVerified={setVerified}
-          availability={availability}
-          setAvailability={setAvailability}
+          search={search} setSearch={setSearch}
+          location={location} setLocation={setLocation}
+          type={type} setType={setType}
+          priceMin={priceMin} setPriceMin={setPriceMin}
+          priceMax={priceMax} setPriceMax={setPriceMax}
+          verified={verified} setVerified={setVerified}
+          availability={availability} setAvailability={setAvailability}
+          sharedOnly={sharedOnly} setSharedOnly={setSharedOnly}
+          university={university} setUniversity={setUniversity}
           locationOptions={LOCATION_FILTER_OPTIONS}
         />
       </motion.div>
 
       <div className="listings-page__results">
-        {loading ? (
-          <p>Loading listings...</p>
-        ) : (
+        {!loading && (
           <div className="listings-page__results-row">
             <p>
               {filteredListings.length} listing{filteredListings.length !== 1 ? "s" : ""} found

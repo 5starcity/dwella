@@ -1,4 +1,4 @@
-// components/home/FeaturedListings.jsx
+ // components/home/FeaturedListings.jsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,45 +14,48 @@ import {
   HiOutlineClipboardDocumentCheck,
   HiOutlineBolt,
   HiOutlineArrowRight,
+  HiOutlineMapPin,
+  HiOutlineExclamationTriangle,
+  HiOutlineAcademicCap,
 } from "react-icons/hi2";
 import "@/styles/featured.css";
 
 const FEATURES = [
   {
-    icon:    <HiOutlineShieldCheck />,
-    title:   "Verified listings",
-    desc:    "Every property is checked before being listed. No fake listings, no ghost apartments.",
-    color:   "blue",
+    icon:  <HiOutlineShieldCheck />,
+    title: "Verified listings",
+    desc:  "Every property is checked before going live. No fake listings, no ghost apartments asking for upfront payment.",
+    color: "blue",
   },
   {
-    icon:    <HiOutlineBanknotes />,
-    title:   "Transparent pricing",
-    desc:    "See the full move-in cost upfront — rent, caution fee, legal fee, everything.",
-    color:   "green",
+    icon:  <HiOutlineBanknotes />,
+    title: "Full cost upfront",
+    desc:  "See rent, caution fee, legal fee and move-in total before you even contact a landlord. No surprises.",
+    color: "green",
   },
   {
-    icon:    <HiOutlineUserGroup />,
-    title:   "Roommate matching",
-    desc:    "Find someone to split the rent with. Post a request or browse the board.",
-    color:   "purple",
+    icon:  <HiOutlineUserGroup />,
+    title: "Split rent with a roommate",
+    desc:  "Found a place you love but can't afford alone? Post on the roommate board and split the cost.",
+    color: "purple",
   },
   {
-    icon:    <HiOutlineClipboardDocumentCheck />,
-    title:   "Book inspections",
-    desc:    "Schedule a visit directly with the landlord — no agent needed.",
-    color:   "teal",
+    icon:  <HiOutlineMapPin />,
+    title: "Near your campus",
+    desc:  "Filter by school — RSU, UniPort, IAUE and more. Find housing close to your campus, not across town.",
+    color: "teal",
   },
   {
-    icon:    <HiOutlineChatBubbleLeftRight />,
-    title:   "WhatsApp contact",
-    desc:    "Chat directly with landlords on WhatsApp. Fast, familiar, no middleman.",
-    color:   "amber",
+    icon:  <HiOutlineChatBubbleLeftRight />,
+    title: "Direct WhatsApp contact",
+    desc:  "Chat straight with landlords on WhatsApp. No agents taking a cut, no middlemen slowing things down.",
+    color: "amber",
   },
   {
-    icon:    <HiOutlineBolt />,
-    title:   "Express interest",
-    desc:    "One tap to notify a landlord you're interested. They get an instant alert.",
-    color:   "red",
+    icon:  <HiOutlineExclamationTriangle />,
+    title: "Scam protection",
+    desc:  "Suspicious prices get flagged automatically. Report dodgy listings and keep the platform safe for everyone.",
+    color: "red",
   },
 ];
 
@@ -85,7 +88,7 @@ export default function FeaturedListings() {
 
   return (
     <>
-      {/* ── Features Section ── */}
+      {/* Features Section */}
       <section className="features">
         <motion.div
           className="features__header"
@@ -94,11 +97,11 @@ export default function FeaturedListings() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <p className="features__eyebrow">Why Dwella</p>
-          <h2>Everything you need to find a home</h2>
+          <p className="features__eyebrow">Why students choose Velen</p>
+          <h2>Everything a student renter needs</h2>
           <p className="features__sub">
-            Built specifically for students and renters in Port Harcourt.
-            No agency fees, no runaround.
+            No agents. No hidden fees. No stress.
+            Just verified housing close to your school.
           </p>
         </motion.div>
 
@@ -110,7 +113,11 @@ export default function FeaturedListings() {
           viewport={{ once: true, margin: "-60px" }}
         >
           {FEATURES.map((f) => (
-            <motion.div key={f.title} className={"features__card features__card--" + f.color} variants={fadeUp}>
+            <motion.div
+              key={f.title}
+              className={"features__card features__card--" + f.color}
+              variants={fadeUp}
+            >
               <div className={"features__card-icon features__card-icon--" + f.color}>
                 {f.icon}
               </div>
@@ -121,7 +128,7 @@ export default function FeaturedListings() {
         </motion.div>
       </section>
 
-      {/* ── Featured Listings ── */}
+      {/* Featured Listings */}
       <section className="featured">
         <motion.div
           className="featured__header"
@@ -130,18 +137,18 @@ export default function FeaturedListings() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <p className="featured__tag">Featured Properties</p>
-          <h2>Explore Available Homes</h2>
+          <p className="featured__tag">Available Now</p>
+          <h2>Rooms near your campus</h2>
           <p>
             Verified properties with transparent pricing, real photos,
-            and direct landlord contact.
+            and direct contact to owners.
           </p>
         </motion.div>
 
         {loading ? (
           <div className="featured__loading">
             <div className="featured__skeleton-grid">
-              {[1,2,3].map((n) => <div key={n} className="featured__skeleton" />)}
+              {[1, 2, 3].map((n) => <div key={n} className="featured__skeleton" />)}
             </div>
           </div>
         ) : listings.length === 0 ? (
@@ -173,14 +180,14 @@ export default function FeaturedListings() {
               transition={{ delay: 0.3 }}
             >
               <Link href="/listings" className="featured__view-all">
-                View All Listings <HiOutlineArrowRight />
+                Browse all listings <HiOutlineArrowRight />
               </Link>
             </motion.div>
           </>
         )}
       </section>
 
-      {/* ── CTA Banner ── */}
+      {/* Student CTA — replaces landlord banner */}
       <section className="home-cta">
         <motion.div
           className="home-cta__inner"
@@ -189,12 +196,23 @@ export default function FeaturedListings() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <p className="home-cta__eyebrow">For landlords</p>
-          <h2>Have a property to rent out?</h2>
-          <p>List for free. Reach students and young professionals actively looking for housing in Port Harcourt.</p>
-          <Link href="/signup" className="home-cta__btn">
-            List Your Property Free
-          </Link>
+          <div className="home-cta__icon">
+            <HiOutlineAcademicCap />
+          </div>
+          <p className="home-cta__eyebrow">For students</p>
+          <h2>Can't afford a place alone?</h2>
+          <p>
+            Use the roommate board to find someone in the same situation.
+            Split the rent, share the space, halve the stress.
+          </p>
+          <div className="home-cta__actions">
+            <Link href="/roommates" className="home-cta__btn">
+              Find a Roommate
+            </Link>
+            <Link href="/listings" className="home-cta__btn home-cta__btn--ghost">
+              Browse Listings
+            </Link>
+          </div>
         </motion.div>
       </section>
     </>

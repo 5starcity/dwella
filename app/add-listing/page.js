@@ -7,40 +7,41 @@ import { useAuth } from "@/context/AuthContext";
 import { createListing } from "@/lib/firestoreListings";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { LOCATIONS, UST_GATE_AREAS, OTHER_PH_AREAS } from "@/lib/locations";
+import { trackEvent } from "@/lib/posthog";
 import "@/styles/add-listing.css";
 
 const initialForm = {
-  title: "",
-  price: "",
-  location: "",
-  address: "",
-  type: "",
-  beds: "1",
-  baths: "1",
-  furnishing: "",
-  availability: "",
-  paymentTerms: "",
-  cautionFee: "",
-  legalFee: "",
-  agencyFee: "",
+  title:         "",
+  price:         "",
+  location:      "",
+  address:       "",
+  type:          "",
+  beds:          "1",
+  baths:         "1",
+  furnishing:    "",
+  availability:  "",
+  paymentTerms:  "",
+  cautionFee:    "",
+  legalFee:      "",
+  agencyFee:     "",
   serviceCharge: "",
-  amenities: "",
-  contact: "",
-  description: "",
+  amenities:     "",
+  contact:       "",
+  description:   "",
 };
 
 export default function AddListingPage() {
   const router = useRouter();
   const { user, userRole } = useAuth();
 
-  const [formData, setFormData] = useState(initialForm);
-  const [imageFiles, setImageFiles] = useState([]);
+  const [formData, setFormData]         = useState(initialForm);
+  const [imageFiles, setImageFiles]     = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
-  const [videoFile, setVideoFile] = useState(null);
+  const [videoFile, setVideoFile]       = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [submitted, setSubmitted] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [errors, setErrors]             = useState({});
+  const [submitted, setSubmitted]       = useState(false);
+  const [saving, setSaving]             = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
 
   useEffect(() => {
@@ -51,15 +52,14 @@ export default function AddListingPage() {
   if (!user || userRole !== "landlord") return null;
 
   const totalMoveInCost = useMemo(() => {
-    const rent = Number(formData.price) || 0;
-    const caution = Number(formData.cautionFee) || 0;
-    const legal = Number(formData.legalFee) || 0;
-    const agency = Number(formData.agencyFee) || 0;
+    const rent    = Number(formData.price)         || 0;
+    const caution = Number(formData.cautionFee)    || 0;
+    const legal   = Number(formData.legalFee)      || 0;
+    const agency  = Number(formData.agencyFee)     || 0;
     const service = Number(formData.serviceCharge) || 0;
     return rent + caution + legal + agency + service;
   }, [formData.price, formData.cautionFee, formData.legalFee, formData.agencyFee, formData.serviceCharge]);
 
-  // When location changes, auto-build the maps URL base
   const selectedLocation = LOCATIONS.find((l) => l.value === formData.location);
 
   function handleChange(e) {
@@ -75,10 +75,8 @@ export default function AddListingPage() {
   }
 
   function removeImage(index) {
-    const newFiles = imageFiles.filter((_, i) => i !== index);
-    const newPreviews = imagePreviews.filter((_, i) => i !== index);
-    setImageFiles(newFiles);
-    setImagePreviews(newPreviews);
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   }
 
   function handleVideoChange(e) {
@@ -96,16 +94,16 @@ export default function AddListingPage() {
 
   function validateForm() {
     const newErrors = {};
-    if (!formData.title.trim()) newErrors.title = "Property title is required";
+    if (!formData.title.trim())        newErrors.title        = "Property title is required";
     if (!formData.price.trim()) {
       newErrors.price = "Price is required";
     } else if (Number(formData.price) <= 0) {
       newErrors.price = "Price must be greater than 0";
     }
-    if (!formData.location) newErrors.location = "Location is required";
-    if (!formData.address.trim()) newErrors.address = "Full property address is required";
-    if (!formData.type.trim()) newErrors.type = "Property type is required";
-    if (!formData.furnishing.trim()) newErrors.furnishing = "Furnishing status is required";
+    if (!formData.location)            newErrors.location     = "Location is required";
+    if (!formData.address.trim())      newErrors.address      = "Full property address is required";
+    if (!formData.type.trim())         newErrors.type         = "Property type is required";
+    if (!formData.furnishing.trim())   newErrors.furnishing   = "Furnishing status is required";
     if (!formData.availability.trim()) newErrors.availability = "Availability is required";
     if (!formData.paymentTerms.trim()) newErrors.paymentTerms = "Payment terms are required";
     if (imageFiles.length === 0 && !videoFile) {
@@ -148,38 +146,46 @@ export default function AddListingPage() {
 
       setUploadProgress("Saving listing...");
 
-      // Use the selected location's mapQuery for a precise Maps URL
       const mapBase = selectedLocation?.mapQuery || formData.location + ", Port Harcourt, Nigeria";
       const mapsUrl = "https://www.google.com/maps/search/?api=1&query=" +
         encodeURIComponent(formData.address.trim() + ", " + mapBase);
 
       await createListing({
-        title: formData.title.trim(),
-        price: formData.price,
-        location: formData.location,
-        address: formData.address.trim(),
+        title:          formData.title.trim(),
+        price:          formData.price,
+        location:       formData.location,
+        address:        formData.address.trim(),
         mapsUrl,
-        type: formData.type.trim(),
-        beds: formData.beds,
-        baths: formData.baths,
-        furnishing: formData.furnishing,
-        availability: formData.availability,
-        paymentTerms: formData.paymentTerms.trim(),
-        cautionFee: formData.cautionFee ? Number(formData.cautionFee) : 0,
-        legalFee: formData.legalFee ? Number(formData.legalFee) : 0,
-        agencyFee: formData.agencyFee ? Number(formData.agencyFee) : 0,
-        serviceCharge: formData.serviceCharge ? Number(formData.serviceCharge) : 0,
+        type:           formData.type.trim(),
+        beds:           formData.beds,
+        baths:          formData.baths,
+        furnishing:     formData.furnishing,
+        availability:   formData.availability,
+        paymentTerms:   formData.paymentTerms.trim(),
+        cautionFee:     formData.cautionFee     ? Number(formData.cautionFee)    : 0,
+        legalFee:       formData.legalFee       ? Number(formData.legalFee)      : 0,
+        agencyFee:      formData.agencyFee      ? Number(formData.agencyFee)     : 0,
+        serviceCharge:  formData.serviceCharge  ? Number(formData.serviceCharge) : 0,
         totalMoveInCost,
-        amenities: formData.amenities.trim(),
-        contact: formData.contact.trim(),
-        description: formData.description.trim(),
-        images: imageUrls,
-        image: imageUrls[0] || null,
-        videoUrl: videoUrl || null,
-        verified: false,
-        featured: false,
-        landlordId: user.uid,
-        landlordName: user.displayName,
+        amenities:      formData.amenities.trim(),
+        contact:        formData.contact.trim(),
+        description:    formData.description.trim(),
+        images:         imageUrls,
+        image:          imageUrls[0] || null,
+        videoUrl:       videoUrl || null,
+        verified:       false,
+        featured:       false,
+        landlordId:     user.uid,
+        landlordName:   user.displayName,
+      });
+
+      trackEvent("listing_created", {
+        location:     formData.location,
+        type:         formData.type,
+        price:        formData.price,
+        availability: formData.availability,
+        hasImages:    imageUrls.length > 0,
+        hasVideo:     !!videoUrl,
       });
 
       setSubmitted(true);
@@ -200,8 +206,7 @@ export default function AddListingPage() {
     }
   }
 
-  // Split locations into groups for the optgroup dropdown
-  const ustAreas = LOCATIONS.filter((l) => UST_GATE_AREAS.includes(l.value));
+  const ustAreas   = LOCATIONS.filter((l) => UST_GATE_AREAS.includes(l.value));
   const otherAreas = LOCATIONS.filter((l) => OTHER_PH_AREAS.includes(l.value));
 
   return (
@@ -291,32 +296,24 @@ export default function AddListingPage() {
           {/* Location */}
           <div className="form-section">
             <p className="form-section__title">Location</p>
-
             <div className="form-group">
               <label className="file-label">Area / Neighbourhood</label>
               <select name="location" value={formData.location} onChange={handleChange}>
                 <option value="">Select area</option>
                 <optgroup label="— UST Gate Areas">
                   {ustAreas.map((loc) => (
-                    <option key={loc.value} value={loc.value}>
-                      {loc.label}
-                    </option>
+                    <option key={loc.value} value={loc.value}>{loc.label}</option>
                   ))}
                 </optgroup>
                 <optgroup label="— Other Port Harcourt Areas">
                   {otherAreas.map((loc) => (
-                    <option key={loc.value} value={loc.value}>
-                      {loc.label}
-                    </option>
+                    <option key={loc.value} value={loc.value}>{loc.label}</option>
                   ))}
                 </optgroup>
               </select>
-              {selectedLocation && (
-                <p className="form-hint">{selectedLocation.hint}</p>
-              )}
+              {selectedLocation && <p className="form-hint">{selectedLocation.hint}</p>}
               {errors.location && <p className="form-error">{errors.location}</p>}
             </div>
-
             <div className="form-group">
               <label className="file-label">Full Street Address</label>
               <input
@@ -402,34 +399,19 @@ export default function AddListingPage() {
               <div className="form-total">
                 <div className="form-total__breakdown">
                   {Number(formData.price) > 0 && (
-                    <div className="form-total__row">
-                      <span>Annual Rent</span>
-                      <span>₦{Number(formData.price).toLocaleString()}</span>
-                    </div>
+                    <div className="form-total__row"><span>Annual Rent</span><span>₦{Number(formData.price).toLocaleString()}</span></div>
                   )}
                   {Number(formData.cautionFee) > 0 && (
-                    <div className="form-total__row">
-                      <span>Caution Fee</span>
-                      <span>₦{Number(formData.cautionFee).toLocaleString()}</span>
-                    </div>
+                    <div className="form-total__row"><span>Caution Fee</span><span>₦{Number(formData.cautionFee).toLocaleString()}</span></div>
                   )}
                   {Number(formData.legalFee) > 0 && (
-                    <div className="form-total__row">
-                      <span>Legal Fee</span>
-                      <span>₦{Number(formData.legalFee).toLocaleString()}</span>
-                    </div>
+                    <div className="form-total__row"><span>Legal Fee</span><span>₦{Number(formData.legalFee).toLocaleString()}</span></div>
                   )}
                   {Number(formData.agencyFee) > 0 && (
-                    <div className="form-total__row">
-                      <span>Agency Fee</span>
-                      <span>₦{Number(formData.agencyFee).toLocaleString()}</span>
-                    </div>
+                    <div className="form-total__row"><span>Agency Fee</span><span>₦{Number(formData.agencyFee).toLocaleString()}</span></div>
                   )}
                   {Number(formData.serviceCharge) > 0 && (
-                    <div className="form-total__row">
-                      <span>Service Charge</span>
-                      <span>₦{Number(formData.serviceCharge).toLocaleString()}</span>
-                    </div>
+                    <div className="form-total__row"><span>Service Charge</span><span>₦{Number(formData.serviceCharge).toLocaleString()}</span></div>
                   )}
                 </div>
                 <div className="form-total__final">
