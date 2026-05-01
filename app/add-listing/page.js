@@ -152,7 +152,7 @@ export default function AddListingPage() {
 
       await createListing({
         title:          formData.title.trim(),
-        price:          formData.price,
+        price:         Number(formData.price),
         location:       formData.location,
         address:        formData.address.trim(),
         mapsUrl,

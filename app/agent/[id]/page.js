@@ -24,6 +24,7 @@ import {
   fetchAgentReviews,
   submitAgentReview,
 } from "@/lib/firestoreAgents";
+import { trackEvent } from "@/lib/posthog";
 import ListingCard from "@/components/listings/ListingCard";
 import "@/styles/agent-profile.css";
 
@@ -90,15 +91,14 @@ export default function AgentProfilePage() {
   const { user, userRole } = useAuth();
   const router = useRouter();
 
-  const [agent, setAgent]     = useState(null);
+  const [agent, setAgent]       = useState(null);
   const [listings, setListings] = useState([]);
-  const [reviews, setReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [reviews, setReviews]   = useState([]);
+  const [loading, setLoading]   = useState(true);
 
-  // Review form
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [rating, setRating]   = useState(0);
-  const [comment, setComment] = useState("");
+  const [rating, setRating]         = useState(0);
+  const [comment, setComment]       = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [reviewSuccess, setReviewSuccess] = useState(false);
@@ -125,9 +125,9 @@ export default function AgentProfilePage() {
 
   async function handleSubmitReview() {
     setReviewError("");
-    if (rating === 0) { setReviewError("Please select a star rating."); return; }
-    if (!comment.trim()) { setReviewError("Please leave a comment."); return; }
-    if (!user) { router.push("/login"); return; }
+    if (rating === 0)      { setReviewError("Please select a star rating."); return; }
+    if (!comment.trim())   { setReviewError("Please leave a comment."); return; }
+    if (!user)             { router.push("/login"); return; }
 
     setSubmitting(true);
     try {
@@ -135,6 +135,13 @@ export default function AgentProfilePage() {
         rating,
         comment: comment.trim(),
       });
+
+      trackEvent("agent_review_submitted", {
+        agentId,
+        agentName: agent?.name,
+        rating,
+      });
+
       const newReview = {
         id:        Date.now().toString(),
         agentId,
@@ -196,14 +203,12 @@ export default function AgentProfilePage() {
   return (
     <main className="agent-page">
 
-      {/* Back */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
         <button className="agent-page__back" onClick={() => router.back()}>
           <HiOutlineArrowLeft /> Back
         </button>
       </motion.div>
 
-      {/* Profile header */}
       <motion.div
         className="agent-page__profile"
         initial={{ opacity: 0, y: 16 }}
@@ -241,7 +246,6 @@ export default function AgentProfilePage() {
         </div>
       </motion.div>
 
-      {/* Stats bar */}
       <motion.div
         className="agent-page__stats"
         initial={{ opacity: 0, y: 10 }}
@@ -269,7 +273,6 @@ export default function AgentProfilePage() {
         </div>
       </motion.div>
 
-      {/* Listings */}
       <motion.section
         className="agent-page__section"
         initial={{ opacity: 0, y: 14 }}
@@ -300,7 +303,6 @@ export default function AgentProfilePage() {
         )}
       </motion.section>
 
-      {/* Reviews */}
       <motion.section
         className="agent-page__section"
         initial={{ opacity: 0, y: 14 }}
@@ -330,7 +332,6 @@ export default function AgentProfilePage() {
           )}
         </div>
 
-        {/* Review form */}
         <AnimatePresence>
           {showReviewForm && (
             <motion.div
@@ -364,7 +365,6 @@ export default function AgentProfilePage() {
           )}
         </AnimatePresence>
 
-        {/* Review list */}
         {reviews.length === 0 ? (
           <div className="agent-page__empty">
             <p>No reviews yet. Be the first to review this agent.</p>

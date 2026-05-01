@@ -1,7 +1,7 @@
 // components/layout/Navbar.jsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -25,9 +25,14 @@ import "@/styles/navbar.css";
 
 export default function Navbar() {
   const { user, userRole } = useAuth();
-  const router = useRouter();
+  const router   = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted]   = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   async function handleLogout() {
     await logOut();
@@ -39,7 +44,8 @@ export default function Navbar() {
     setMenuOpen(false);
   }
 
-  const isActive = (href) => pathname === href;
+  // Only apply active class after hydration
+  const isActive = (href) => mounted && pathname === href;
 
   return (
     <>
@@ -113,7 +119,6 @@ export default function Navbar() {
 
       <div className={"navbar__drawer" + (menuOpen ? " open" : "")}>
         <div className="navbar__drawer-header">
-          {/* Fixed: was "Dwella", now "Velen" */}
           <p className="navbar__drawer-logo">Vel<span>en</span></p>
           <div className="navbar__drawer-header-right">
             {user && <NotificationBell />}
@@ -125,7 +130,6 @@ export default function Navbar() {
           <Link href="/" className={"navbar__drawer-link" + (isActive("/") ? " active" : "")} onClick={closeMenu}>
             <HiOutlineHome /><span>Home</span>
           </Link>
-          {/* Fixed: was using HiOutlineHome, now uses building icon */}
           <Link href="/listings" className={"navbar__drawer-link" + (isActive("/listings") ? " active" : "")} onClick={closeMenu}>
             <HiOutlineBuildingOffice2 /><span>Browse Listings</span>
           </Link>

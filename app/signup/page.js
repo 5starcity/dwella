@@ -18,6 +18,7 @@ import {
   signInWithApple,
   saveSocialUserProfile,
 } from "@/lib/auth";
+import { trackEvent } from "@/lib/posthog";
 import "@/styles/auth.css";
 
 function RolePickerModal({ user, onDone }) {
@@ -81,12 +82,13 @@ function RolePickerModal({ user, onDone }) {
 export default function SignupPage() {
   const router = useRouter();
 
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [form, setForm]                   = useState({ name: "", email: "", password: "", role: "student" });
+  const [error, setError]                 = useState("");
+  const [loading, setLoading]             = useState(false);
   const [socialLoading, setSocialLoading] = useState(null);
-  const [showEmail, setShowEmail] = useState(false);
-  const [pendingUser, setPendingUser] = useState(null);
+  const [showEmail, setShowEmail]         = useState(false);
+  const [pendingUser, setPendingUser]     = useState(null);
+  const [pendingMethod, setPendingMethod] = useState(null);
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -99,6 +101,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await signUp(form.email, form.password, form.name, form.role);
+      trackEvent("signup", { method: "email", role: form.role });
       router.push(form.role === "landlord" ? "/verify-landlord" : "/");
     } catch (err) {
       if (err.code === "auth/email-already-in-use") {
@@ -118,6 +121,7 @@ export default function SignupPage() {
       const { user, isNewUser } = await signInWithGoogle();
       if (isNewUser) {
         setPendingUser(user);
+        setPendingMethod("google");
       } else {
         window.location.href = "/";
       }
@@ -137,6 +141,7 @@ export default function SignupPage() {
       const { user, isNewUser } = await signInWithApple();
       if (isNewUser) {
         setPendingUser(user);
+        setPendingMethod("apple");
       } else {
         window.location.href = "/";
       }
@@ -150,7 +155,9 @@ export default function SignupPage() {
   }
 
   function handleRoleDone(role) {
+    trackEvent("signup", { method: pendingMethod || "social", role });
     setPendingUser(null);
+    setPendingMethod(null);
     window.location.href = role === "landlord" ? "/verify-landlord" : "/";
   }
 
