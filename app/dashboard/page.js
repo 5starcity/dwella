@@ -28,6 +28,7 @@ import {
   HiOutlinePhone,
   HiOutlineXCircle,
   HiOutlineCheck,
+  HiOutlineShieldCheck,
 } from "react-icons/hi2";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -40,6 +41,10 @@ import {
   fetchInspectionsByLandlord,
   updateInspectionStatus,
 } from "@/lib/firestoreInspections";
+import {
+  fetchReservationsByLandlord,
+  updateReservationStatus,
+} from "@/lib/firestoreReservations";
 import "@/styles/dashboard.css";
 
 const AVAILABILITY_OPTIONS = ["Available Now", "Available Soon", "Not Available"];
@@ -63,7 +68,7 @@ function getExpiryStatus(listing) {
 }
 function daysUntilExpiry(listing) { return Math.max(0, EXPIRY_DAYS - getListingAge(listing)); }
 function getConversionRate(listing) {
-  const views = Number(listing.views) || 0;
+  const views     = Number(listing.views)     || 0;
   const interests = Number(listing.interests) || 0;
   if (views === 0) return null;
   return Math.round((interests / views) * 1000) / 10;
@@ -71,7 +76,7 @@ function getConversionRate(listing) {
 function getConversionLabel(rate, views) {
   if (rate === null || views < 5) return { text: "Not enough data", tier: "neutral" };
   if (rate >= 15) return { text: "High demand", tier: "hot" };
-  if (rate >= 5)  return { text: "Good", tier: "good" };
+  if (rate >= 5)  return { text: "Good",        tier: "good" };
   if (views >= 10) return { text: "Low conversion", tier: "low" };
   return { text: "Not enough data", tier: "neutral" };
 }
@@ -80,21 +85,27 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, userRole, loading: authLoading } = useAuth();
 
-  const [listings, setListings]       = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [deletingId, setDeletingId]   = useState(null);
-  const [updatingId, setUpdatingId]   = useState(null);
-  const [renewingId, setRenewingId]   = useState(null);
-  const [filter, setFilter]           = useState("All");
-  const [sortBy, setSortBy]           = useState("newest");
+  const [listings, setListings]             = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [deletingId, setDeletingId]         = useState(null);
+  const [updatingId, setUpdatingId]         = useState(null);
+  const [renewingId, setRenewingId]         = useState(null);
+  const [filter, setFilter]                 = useState("All");
+  const [sortBy, setSortBy]                 = useState("newest");
   const [dismissedBanner, setDismissedBanner] = useState(false);
 
   // Inspections
-  const [inspections, setInspections]         = useState([]);
+  const [inspections, setInspections]               = useState([]);
   const [inspectionsLoading, setInspectionsLoading] = useState(true);
-  const [inspectFilter, setInspectFilter]     = useState("pending");
-  const [updatingInspectId, setUpdatingInspectId] = useState(null);
-  const [inspectToast, setInspectToast]       = useState(null);
+  const [inspectFilter, setInspectFilter]           = useState("pending");
+  const [updatingInspectId, setUpdatingInspectId]   = useState(null);
+  const [inspectToast, setInspectToast]             = useState(null);
+
+  // Reservations
+  const [reservations, setReservations]                 = useState([]);
+  const [reservationsLoading, setReservationsLoading]   = useState(true);
+  const [reserveFilter, setReserveFilter]               = useState("pending");
+  const [updatingReserveId, setUpdatingReserveId]       = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -133,6 +144,22 @@ export default function DashboardPage() {
     loadInspections();
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    async function loadReservations() {
+      setReservationsLoading(true);
+      try {
+        const data = await fetchReservationsByLandlord(user.uid);
+        setReservations(data);
+      } catch (e) {
+        console.error("Error loading reservations:", e);
+      } finally {
+        setReservationsLoading(false);
+      }
+    }
+    loadReservations();
+  }, [user]);
+
   function showInspectToast(msg, type = "success") {
     setInspectToast({ msg, type });
     setTimeout(() => setInspectToast(null), 3000);
@@ -149,6 +176,20 @@ export default function DashboardPage() {
       showInspectToast("Failed to update inspection.", "error");
     } finally {
       setUpdatingInspectId(null);
+    }
+  }
+
+  async function handleReservationStatus(id, status) {
+    setUpdatingReserveId(id);
+    try {
+      await updateReservationStatus(id, status);
+      setReservations((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+      showInspectToast(status === "confirmed" ? "Reservation confirmed." : "Reservation declined.");
+    } catch (e) {
+      console.error(e);
+      showInspectToast("Failed to update reservation.", "error");
+    } finally {
+      setUpdatingReserveId(null);
     }
   }
 
@@ -179,13 +220,17 @@ export default function DashboardPage() {
     ? Math.round(listingsWithData.reduce((s, l) => s + getConversionRate(l), 0) / listingsWithData.length * 10) / 10
     : null;
 
-  const pendingCount   = inspections.filter((i) => i.status === "pending").length;
-  const confirmedCount = inspections.filter((i) => i.status === "confirmed").length;
+  const pendingInspCount   = inspections.filter((i) => i.status === "pending").length;
+  const confirmedInspCount = inspections.filter((i) => i.status === "confirmed").length;
+  const pendingResCount    = reservations.filter((r) => r.status === "pending").length;
 
-  const filteredInspections = inspections.filter((i) => {
-    if (inspectFilter === "all") return true;
-    return i.status === inspectFilter;
-  });
+  const filteredInspections = inspections.filter((i) =>
+    inspectFilter === "all" || i.status === inspectFilter
+  );
+
+  const filteredReservations = reservations.filter((r) =>
+    reserveFilter === "all" || r.status === reserveFilter
+  );
 
   const filtered = listings
     .filter((l) => {
@@ -233,11 +278,12 @@ export default function DashboardPage() {
   }
 
   const stats = [
-    { label: "Total Listings",          value: listings.length,                  icon: <HiOutlineHomeModern />,     accent: "blue"   },
-    { label: "Total Views",             value: totalViews.toLocaleString(),       icon: <HiOutlineEye />,            accent: "purple", onClick: () => setSortBy("views"),       tip: "Sort by most viewed" },
-    { label: "Expressions of Interest", value: totalInterests.toLocaleString(),  icon: <HiOutlineBolt />,           accent: "amber",  onClick: () => setSortBy("interests"),   tip: "Sort by most interest" },
-    { label: "Available Now",           value: availableCount,                   icon: <HiOutlineCheckCircle />,    accent: "green",  onClick: () => setFilter("Available Now"), tip: "Filter available listings" },
-    { label: "Pending Inspections",     value: pendingCount,                     icon: <HiOutlineClipboardDocumentCheck />, accent: pendingCount > 0 ? "amber" : "gray", onClick: () => setInspectFilter("pending"), tip: "View pending inspections" },
+    { label: "Total Listings",          value: listings.length,                 icon: <HiOutlineHomeModern />,            accent: "blue"   },
+    { label: "Total Views",             value: totalViews.toLocaleString(),      icon: <HiOutlineEye />,                   accent: "purple", onClick: () => setSortBy("views"),         tip: "Sort by most viewed" },
+    { label: "Expressions of Interest", value: totalInterests.toLocaleString(), icon: <HiOutlineBolt />,                  accent: "amber",  onClick: () => setSortBy("interests"),     tip: "Sort by most interest" },
+    { label: "Available Now",           value: availableCount,                  icon: <HiOutlineCheckCircle />,           accent: "green",  onClick: () => setFilter("Available Now"), tip: "Filter available listings" },
+    { label: "Pending Inspections",     value: pendingInspCount,                icon: <HiOutlineClipboardDocumentCheck />, accent: pendingInspCount > 0 ? "amber" : "gray", onClick: () => setInspectFilter("pending"), tip: "View pending inspections" },
+    { label: "Pending Reservations",    value: pendingResCount,                 icon: <HiOutlineShieldCheck />,           accent: pendingResCount > 0 ? "teal" : "gray",   onClick: () => setReserveFilter("pending"),  tip: "View pending reservations" },
     {
       label:    "Avg Conversion",
       value:    avgConversion !== null ? avgConversion + "%" : "—",
@@ -263,7 +309,7 @@ export default function DashboardPage() {
   return (
     <main className="dashboard">
 
-      {/* ── Inspection Toast ── */}
+      {/* Toast */}
       <AnimatePresence>
         {inspectToast && (
           <motion.div
@@ -276,7 +322,7 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Expiry Banner ── */}
+      {/* Expiry Banner */}
       <AnimatePresence>
         {needsAttention > 0 && !dismissedBanner && (
           <motion.div className="dashboard__expiry-banner" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
@@ -297,7 +343,7 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <motion.div className="dashboard__header" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: "easeOut" }}>
         <div className="dashboard__header-left">
           <p className="dashboard__eyebrow"><HiOutlineChartBarSquare /> Landlord Dashboard</p>
@@ -307,7 +353,7 @@ export default function DashboardPage() {
         <Link href="/add-listing" className="dashboard__add-btn"><HiOutlinePlus /> Add Listing</Link>
       </motion.div>
 
-      {/* ── Stats ── */}
+      {/* Stats */}
       <motion.div className="dashboard__stats" variants={stagger} initial="hidden" animate="show">
         {stats.map((s) => (
           <motion.div
@@ -334,12 +380,12 @@ export default function DashboardPage() {
           <div className="dashboard__inspections-title">
             <HiOutlineClipboardDocumentCheck />
             <h2>Inspection Requests</h2>
-            {pendingCount > 0 && <span className="dashboard__inspections-badge">{pendingCount} pending</span>}
+            {pendingInspCount > 0 && <span className="dashboard__inspections-badge">{pendingInspCount} pending</span>}
           </div>
           <div className="dashboard__inspections-tabs">
             {[
-              { key: "pending",   label: "Pending",   count: pendingCount },
-              { key: "confirmed", label: "Confirmed", count: confirmedCount },
+              { key: "pending",   label: "Pending",   count: pendingInspCount },
+              { key: "confirmed", label: "Confirmed", count: confirmedInspCount },
               { key: "cancelled", label: "Cancelled", count: inspections.filter((i) => i.status === "cancelled").length },
               { key: "all",       label: "All",       count: inspections.length },
             ].map((tab) => (
@@ -401,16 +447,14 @@ export default function DashboardPage() {
                         onClick={() => handleInspectionStatus(insp.id, "confirmed")}
                         disabled={updatingInspectId === insp.id}
                       >
-                        <HiOutlineCheck />
-                        <span>Confirm</span>
+                        <HiOutlineCheck /><span>Confirm</span>
                       </button>
                       <button
                         className="dashboard__inspect-cancel"
                         onClick={() => handleInspectionStatus(insp.id, "cancelled")}
                         disabled={updatingInspectId === insp.id}
                       >
-                        <HiOutlineXCircle />
-                        <span>Decline</span>
+                        <HiOutlineXCircle /><span>Decline</span>
                       </button>
                     </div>
                   )}
@@ -421,7 +465,101 @@ export default function DashboardPage() {
         )}
       </motion.div>
 
-      {/* ── Controls ── */}
+      {/* ── RESERVATIONS SECTION ── */}
+      <motion.div className="dashboard__inspections" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }}>
+        <div className="dashboard__inspections-header">
+          <div className="dashboard__inspections-title">
+            <HiOutlineShieldCheck />
+            <h2>Reservation Requests</h2>
+            {pendingResCount > 0 && <span className="dashboard__inspections-badge">{pendingResCount} pending</span>}
+          </div>
+          <div className="dashboard__inspections-tabs">
+            {[
+              { key: "pending",   label: "Pending",   count: pendingResCount },
+              { key: "confirmed", label: "Confirmed", count: reservations.filter((r) => r.status === "confirmed").length },
+              { key: "declined",  label: "Declined",  count: reservations.filter((r) => r.status === "declined").length },
+              { key: "all",       label: "All",       count: reservations.length },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                className={"dashboard__inspect-tab" + (reserveFilter === tab.key ? " active" : "")}
+                onClick={() => setReserveFilter(tab.key)}
+              >
+                {tab.label}
+                {tab.count > 0 && <span className="dashboard__inspect-tab-count">{tab.count}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {reservationsLoading ? (
+          <div className="dashboard__inspections-loading">
+            <span className="dashboard__mini-spinner" />
+            <span>Loading reservations...</span>
+          </div>
+        ) : filteredReservations.length === 0 ? (
+          <div className="dashboard__inspections-empty">
+            <HiOutlineShieldCheck />
+            <p>{reserveFilter === "pending" ? "No pending reservation requests." : "No reservations in this category."}</p>
+          </div>
+        ) : (
+          <div className="dashboard__inspections-list">
+            <AnimatePresence>
+              {filteredReservations.map((res) => (
+                <motion.div
+                  key={res.id}
+                  className={"dashboard__inspect-card dashboard__inspect-card--" + res.status}
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.22 }}
+                >
+                  <div className="dashboard__inspect-card-left">
+                    <div className="dashboard__inspect-card-avatar">
+                      {(res.studentName || "?")[0].toUpperCase()}
+                    </div>
+                    <div className="dashboard__inspect-card-info">
+                      <p className="dashboard__inspect-card-name">
+                        {res.studentName}
+                        <span className={"dashboard__inspect-status dashboard__inspect-status--" + res.status}>
+                          {res.status}
+                        </span>
+                      </p>
+                      <p className="dashboard__inspect-card-listing">{res.listingTitle}</p>
+                      <div className="dashboard__inspect-card-meta">
+                        <span><HiOutlineCalendarDays />Move-in: {res.moveInDate}</span>
+                        {res.studentPhone && <span><HiOutlinePhone />{res.studentPhone}</span>}
+                      </div>
+                      <p style={{ fontSize: "0.75rem", color: "#475569", margin: "4px 0 0" }}>
+                        ID: VLN-{res.id?.slice(0, 8).toUpperCase()}
+                      </p>
+                      {res.note && <p className="dashboard__inspect-card-note">"{res.note}"</p>}
+                    </div>
+                  </div>
+
+                  {res.status === "pending" && (
+                    <div className="dashboard__inspect-card-actions">
+                      <button
+                        className="dashboard__inspect-confirm"
+                        onClick={() => handleReservationStatus(res.id, "confirmed")}
+                        disabled={updatingReserveId === res.id}
+                      >
+                        <HiOutlineCheck /><span>Confirm</span>
+                      </button>
+                      <button
+                        className="dashboard__inspect-cancel"
+                        onClick={() => handleReservationStatus(res.id, "declined")}
+                        disabled={updatingReserveId === res.id}
+                      >
+                        <HiOutlineXCircle /><span>Decline</span>
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Controls */}
       <motion.div className="dashboard__controls" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25, duration: 0.3 }}>
         <div className="dashboard__filters">
           {filterTabs.map((tab) => (
@@ -449,7 +587,7 @@ export default function DashboardPage() {
         </select>
       </motion.div>
 
-      {/* ── Listings ── */}
+      {/* Listings */}
       {listings.length === 0 ? (
         <motion.div className="dashboard__empty" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <HiOutlineHomeModern className="dashboard__empty-icon" />

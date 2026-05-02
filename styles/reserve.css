@@ -1,0 +1,548 @@
+/* styles/reserve.css */
+
+/* ── Shared base ── */
+.reserve-page,
+.my-reservations-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 100px 24px 80px;
+}
+
+.reserve-page__loading,
+.my-reservations-page__loading {
+  display: flex;
+  justify-content: center;
+  padding: 120px 0;
+}
+
+.reserve-page__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255,255,255,0.08);
+  border-top-color: #4f6ef7;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.reserve-page__not-found {
+  text-align: center;
+  padding: 80px 0;
+  color: #64748b;
+}
+.reserve-page__not-found a { color: #818cf8; text-decoration: none; }
+
+/* Back + header */
+.reserve-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.88rem;
+  text-decoration: none;
+  margin-bottom: 24px;
+  transition: color 0.2s;
+}
+.reserve-page__back:hover { color: #f8fafc; }
+
+.reserve-page__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4f6ef7;
+  margin-bottom: 8px;
+}
+
+.reserve-page__header h1,
+.my-reservations-page__header h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin: 0 0 8px;
+}
+
+.reserve-page__sub {
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 28px;
+}
+
+/* Listing preview */
+.reserve-page__listing-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.reserve-page__listing-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(79,110,247,0.1);
+  color: #4f6ef7;
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.reserve-page__listing-info { flex: 1; }
+.reserve-page__listing-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0 0 4px;
+}
+.reserve-page__listing-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.reserve-page__listing-price {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+}
+.reserve-page__listing-price span {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 400;
+}
+
+/* Form */
+.reserve-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.reserve-page__section { display: flex; flex-direction: column; gap: 8px; }
+
+.reserve-page__section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.reserve-page__section-label em { font-weight: 400; color: #475569; }
+
+.reserve-page__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.reserve-page__input-icon {
+  position: absolute;
+  left: 14px;
+  color: #475569;
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.reserve-page__input {
+  width: 100%;
+  padding: 13px 14px 13px 40px;
+  background: #111827;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.reserve-page__input:focus { border-color: rgba(96,165,250,0.4); }
+
+.reserve-page__textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: #111827;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.reserve-page__textarea:focus { border-color: rgba(96,165,250,0.4); }
+.reserve-page__textarea::placeholder { color: #475569; }
+.reserve-page__char-count { font-size: 0.75rem; color: #475569; text-align: right; margin: 0; }
+
+/* Fee notice */
+.reserve-page__fee-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(34,197,94,0.06);
+  border: 1px solid rgba(34,197,94,0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.reserve-page__fee-notice svg { color: #86efac; font-size: 1.2rem; flex-shrink: 0; }
+.reserve-page__fee-title { font-weight: 600; color: #e2e8f0; margin: 0 0 2px; font-size: 0.88rem; }
+.reserve-page__fee-sub { margin: 0; font-size: 0.78rem; }
+.reserve-page__fee-badge {
+  margin-left: auto;
+  background: rgba(34,197,94,0.12);
+  border: 1px solid rgba(34,197,94,0.25);
+  color: #86efac;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* Error */
+.reserve-page__error {
+  color: #f87171;
+  font-size: 0.85rem;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0;
+}
+
+/* Submit */
+.reserve-page__submit {
+  width: 100%;
+  padding: 14px;
+  background: #4f6ef7;
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(79,110,247,0.3);
+}
+.reserve-page__submit:hover { background: #3a58e0; transform: translateY(-1px); }
+.reserve-page__submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.reserve-page__disclaimer {
+  font-size: 0.78rem;
+  color: #475569;
+  text-align: center;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Success */
+.reserve-page__success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  padding: 20px 0;
+}
+.reserve-page__success-icon {
+  font-size: 3.5rem;
+  color: #86efac;
+  display: flex;
+}
+.reserve-page__success h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin: 0;
+}
+.reserve-page__success p {
+  color: #94a3b8;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 420px;
+}
+.reserve-page__success-note {
+  color: #64748b !important;
+  font-size: 0.82rem !important;
+}
+
+/* Receipt */
+.reserve-page__receipt {
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.reserve-page__receipt-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: rgba(79,110,247,0.08);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #818cf8;
+}
+.reserve-page__receipt-rows { padding: 8px 0; }
+.reserve-page__receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.reserve-page__receipt-row:last-child { border-bottom: none; }
+.reserve-page__receipt-row span { color: #64748b; }
+.reserve-page__receipt-row strong { color: #e2e8f0; font-weight: 600; }
+.reserve-page__tracking-id {
+  font-family: monospace;
+  color: #818cf8 !important;
+  font-size: 0.92rem !important;
+}
+.reserve-page__status-pending { color: #fbbf24 !important; }
+.reserve-page__status-free { color: #86efac !important; }
+
+/* Action buttons */
+.reserve-page__success-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+.reserve-page__btn {
+  padding: 11px 22px;
+  background: #4f6ef7;
+  border: none;
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.reserve-page__btn:hover { background: #3a58e0; }
+.reserve-page__btn--ghost {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+}
+.reserve-page__btn--ghost:hover { background: rgba(255,255,255,0.08); }
+
+/* ── My Reservations page ── */
+.my-reservations-page__header { margin-bottom: 24px; }
+
+.my-reservations-page__summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.my-reservations-page__tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.my-reservations-page__tab.active {
+  background: rgba(79,110,247,0.1);
+  border-color: rgba(79,110,247,0.25);
+  color: #818cf8;
+}
+.my-reservations-page__tab-count {
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.72rem;
+}
+
+.my-reservations-page__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.my-reservations-page__card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s;
+}
+.my-reservations-page__card--confirmed { border-color: rgba(34,197,94,0.2); }
+.my-reservations-page__card--declined  { border-color: rgba(239,68,68,0.15); opacity: 0.7; }
+.my-reservations-page__card--cancelled { opacity: 0.6; }
+
+.my-reservations-page__card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.my-reservations-page__card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(79,110,247,0.1);
+  color: #4f6ef7;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.my-reservations-page__card-title-wrap { flex: 1; }
+.my-reservations-page__card-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0 0 4px;
+}
+.my-reservations-page__card-link {
+  color: #64748b;
+  font-size: 1.1rem;
+  display: flex;
+  transition: color 0.2s;
+}
+.my-reservations-page__card-link:hover { color: #818cf8; }
+
+/* Status badge */
+.my-reservations__status {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.my-reservations__status--pending   { background: rgba(251,191,36,0.1);  color: #fbbf24; }
+.my-reservations__status--confirmed { background: rgba(34,197,94,0.1);   color: #86efac; }
+.my-reservations__status--declined  { background: rgba(239,68,68,0.1);   color: #f87171; }
+.my-reservations__status--cancelled { background: rgba(100,116,139,0.1); color: #64748b; }
+
+.my-reservations-page__card-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.my-reservations-page__card-detail {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Receipt strip */
+.my-reservations-page__receipt-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  color: #475569;
+}
+.my-reservations-page__receipt-strip strong { color: #818cf8; font-family: monospace; }
+.my-reservations-page__fee-free { color: #86efac; font-weight: 600; }
+
+.my-reservations-page__note {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-style: italic;
+  margin: 0;
+}
+
+.my-reservations-page__confirmed-msg {
+  font-size: 0.85rem;
+  color: #86efac;
+  background: rgba(34,197,94,0.06);
+  border: 1px solid rgba(34,197,94,0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.my-reservations-page__card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.my-reservations-page__waiting {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0;
+}
+.my-reservations-page__cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #f87171;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.my-reservations-page__cancel-btn:hover { background: rgba(239,68,68,0.08); }
+.my-reservations-page__cancel-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.my-reservations-page__empty {
+  text-align: center;
+  padding: 60px 0;
+  color: #475569;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.my-reservations-page__empty-icon {
+  font-size: 2.5rem;
+  color: #1e293b;
+}
+.my-reservations-page__empty h2 {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin: 0;
+}
+.my-reservations-page__empty p { margin: 0; font-size: 0.88rem; }
+
+@media (max-width: 480px) {
+  .reserve-page__success-actions { flex-direction: column; }
+  .reserve-page__btn { width: 100%; justify-content: center; }
+}

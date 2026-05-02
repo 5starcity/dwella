@@ -17,6 +17,7 @@ import {
   HiOutlineChartBarSquare,
   HiOutlineUserGroup,
   HiOutlineBuildingOffice2,
+  HiOutlineShieldCheck,
   HiXMark,
   HiBars3,
 } from "react-icons/hi2";
@@ -44,7 +45,6 @@ export default function Navbar() {
     setMenuOpen(false);
   }
 
-  // Only apply active class after hydration
   const isActive = (href) => mounted && pathname === href;
 
   return (
@@ -61,9 +61,14 @@ export default function Navbar() {
               Browse
             </Link>
             {userRole === "student" && (
-              <Link href="/roommates" className={isActive("/roommates") ? "active" : ""}>
-                Roommates
-              </Link>
+              <>
+                <Link href="/roommates" className={isActive("/roommates") ? "active" : ""}>
+                  Roommates
+                </Link>
+                <Link href="/my-reservations" className={isActive("/my-reservations") ? "active" : ""}>
+                  Reservations
+                </Link>
+              </>
             )}
             {userRole === "landlord" && (
               <>
@@ -134,9 +139,14 @@ export default function Navbar() {
             <HiOutlineBuildingOffice2 /><span>Browse Listings</span>
           </Link>
           {userRole === "student" && (
-            <Link href="/roommates" className={"navbar__drawer-link" + (isActive("/roommates") ? " active" : "")} onClick={closeMenu}>
-              <HiOutlineUserGroup /><span>Roommates</span>
-            </Link>
+            <>
+              <Link href="/roommates" className={"navbar__drawer-link" + (isActive("/roommates") ? " active" : "")} onClick={closeMenu}>
+                <HiOutlineUserGroup /><span>Roommates</span>
+              </Link>
+              <Link href="/my-reservations" className={"navbar__drawer-link" + (isActive("/my-reservations") ? " active" : "")} onClick={closeMenu}>
+                <HiOutlineShieldCheck /><span>My Reservations</span>
+              </Link>
+            </>
           )}
           {userRole === "landlord" && (
             <>

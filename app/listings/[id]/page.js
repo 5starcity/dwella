@@ -499,6 +499,19 @@ export default function ListingDetailsPage() {
                     <HiOutlineClipboardDocumentCheck /> Book Inspection
                   </button>
                 )}
+                {/* Reserve button */}
+{!isOwner && (
+  <button
+    className="details-page__reserve-btn"
+    onClick={() => {
+      if (!user) { router.push("/login"); return; }
+      trackEvent("reserve_click", { listingId, listingTitle: listing.title });
+      router.push("/reserve/" + listingId);
+    }}
+  >
+    <HiOutlineShieldCheck /> Reserve this Room
+  </button>
+)}
 
                 {roommatePost && !isOwner && (
                   <div className="details-page__roommate-cta">
